@@ -1,0 +1,7 @@
+{
+  "name": "Cane.Unity",
+  "rootNamespace": "Cane.Unity",
+  "references": ["Cane.Core"],
+  "autoReferenced": true,
+  "allowUnsafeCode": false
+}

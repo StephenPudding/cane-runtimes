@@ -1,0 +1,45 @@
+{
+  "name": "@cane-runtime/cocos-3.8.8",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cane Runtime integration for exactly Cocos Creator 3.8.8.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "cocos-assets/**/*.effect",
+    "docs/**/*.md",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "engines": {
+    "cocos-creator": "3.8.8"
+  },
+  "scripts": {
+    "verify:sdk": "node scripts/verify-cocos-sdk.mjs",
+    "build": "pnpm run verify:sdk && tsc -b",
+    "prepack": "pnpm run build",
+    "typecheck": "pnpm run verify:sdk && tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@cane-runtime/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@cocos/creator-types": "3.8.8"
+  }
+}

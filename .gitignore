@@ -1,0 +1,44 @@
+# Build output, dependencies and caches
+node_modules/
+dist/
+bin/
+obj/
+coverage/
+*.tsbuildinfo
+.vite/
+.npm-cache/
+.pnpm-store/
+.tmp/
+.generated/
+.rust-target/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local development workspace; not part of the public Runtime source
+/AGENTS.md
+/progress_docs/
+/conformance/
+/examples/
+/cane-ts/cane-benchmarks/
+/cane-ts/cane-conformance/
+**/test/
+**/tests/
+**/Tests/
+**/example/
+**/examples/
+**/Samples~/
+**/vitest.*
+**/scripts/*
+
+# These two helpers prepare the exact engine SDK required to compile adapters.
+!/cane-ts/cane-layaair-3.4.1/scripts/verify-layaair-sdk.mjs
+!/cane-ts/cane-cocos-3.8.8/scripts/verify-cocos-sdk.mjs
+
+/cane-cpp/cane-godot/distribution/
+/cane-csharp/cane-unity/toolchain.json
+/docs/CONTRIBUTING.md
+/docs/DEVELOPMENT_LAYOUT.md
+/docs/CSHARP_CPP_QUICKSTART.md
+/cane-csharp/cane-unity/docs/PLAYER_ACCEPTANCE.md

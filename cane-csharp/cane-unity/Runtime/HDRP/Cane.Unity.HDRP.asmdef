@@ -1,0 +1,9 @@
+{
+  "name": "Cane.Unity.HDRP",
+  "references": ["Cane.Unity", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.HighDefinition.Runtime"],
+  "autoReferenced": true,
+  "defineConstraints": ["CANE_HDRP"],
+  "versionDefines": [
+    { "name": "com.unity.render-pipelines.high-definition", "expression": "[17.3.0,18.0.0)", "define": "CANE_HDRP" }
+  ]
+}

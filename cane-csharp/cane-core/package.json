@@ -1,0 +1,8 @@
+{
+  "name": "com.cane.runtime.core",
+  "version": "0.1.0-alpha.4",
+  "displayName": "Cane Runtime Core",
+  "description": "Engine-neutral Cane C# data, animation and final geometry evaluation.",
+  "unity": "6000.0",
+  "author": { "name": "Cane" }
+}

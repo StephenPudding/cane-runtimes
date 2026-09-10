@@ -1,0 +1,44 @@
+{
+  "schema": "cane.runtime-specification/normative-correction/v1",
+  "date": "2026-09-08",
+  "authorization": "User explicitly approved allowing zero bone-animation scale according to actual Cane exports, retaining non-zero setup bone and Region rules, and adding regressions.",
+  "specification": {
+    "path": "specification/formats/RUNTIME_MODEL_V1.md",
+    "section": "Bone timelines",
+    "previousSha256": "48a5cc415ea3714e7d86a842d47d418f35e22d5ee843f515f7b979e422684d0a",
+    "sha256": "1288ad70cd42d7b39006a1edeebc6a4e3107cdefbd7c9559a8a153eee77587c4",
+    "previousRule": "Scale values are finite and non-zero when applied.",
+    "rule": "Bone animation scale values are finite and may be zero or negative. A zero animated scale produces its singular affine matrix; it is not replaced by epsilon or setup scale. Setup bone scales remain non-zero."
+  },
+  "evidenceAsset": {
+    "path": "examples/pixi-v8/public/assets/spineboy.caneb",
+    "sha256": "b23ea9d3be2c8aa74cc072a9c1e73cbd0de216baec70df646f45045ab73ed1e5",
+    "animationId": "portal",
+    "boneId": "portal-streaks2",
+    "timeSecondsBinary32": 3.1666669845581055,
+    "channel": "scale",
+    "values": { "x": 0, "y": 0 },
+    "modified": false
+  },
+  "unchanged": {
+    "setupBoneScaleNonZero": true,
+    "setupRegionScaleNonZero": true,
+    "regionAnimationScaleNonZero": true,
+    "suiteVersion": "1.8.0",
+    "requiredCaseCount": 95,
+    "manifestSha256": "ddcd7bb2b5e9dadc00a95d8997886e87c31bc4e5eb5d43811eeabbb2ce98b696",
+    "specLockSha256": "03daf99f7fd9735cac04c617f5da2c7c77d477b8c23d4d5d602935dcfae02c21",
+    "fixtureInputsExpectedAndTolerances": true
+  },
+  "regressionSources": [
+    "cane-cpp/cane-tests/zero_scale_checks.cpp",
+    "cane-cpp/cane-tests/real_asset_checks.cpp",
+    "cane-csharp/cane-tests/ZeroScaleChecks.cs"
+  ],
+  "buildEvidence": [
+    ".tmp/cpp/development-evidence.json",
+    ".tmp/cpp-gcc/development-evidence.json",
+    ".tmp/csharp/release-evidence.json"
+  ],
+  "acceptanceRule": "Only current-source successful two-fresh-process evidence establishes native regression coverage; this clarification does not certify a complete Core or an engine adapter."
+}

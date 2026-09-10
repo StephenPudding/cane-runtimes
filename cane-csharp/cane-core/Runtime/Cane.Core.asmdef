@@ -1,0 +1,7 @@
+{
+  "name": "Cane.Core",
+  "rootNamespace": "Cane",
+  "references": [],
+  "autoReferenced": true,
+  "noEngineReferences": true
+}

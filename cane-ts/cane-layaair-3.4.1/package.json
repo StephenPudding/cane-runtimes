@@ -1,0 +1,48 @@
+{
+  "name": "@cane-runtime/layaair-3.4.1",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cane Runtime WebGL/WebGPU integration for exactly LayaAir 3.4.1.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/iife/cane-layaair-3.4.1.min.js",
+  "jsdelivr": "./dist/iife/cane-layaair-3.4.1.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "docs/**/*.md",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "scripts": {
+    "verify:sdk": "node scripts/verify-layaair-sdk.mjs",
+    "build": "pnpm run verify:sdk && tsc -b && pnpm run bundle:iife",
+    "bundle:iife": "rollup --config rollup.config.mjs",
+    "prepack": "pnpm run build",
+    "typecheck": "pnpm run verify:sdk && tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@cane-runtime/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "layaair": "3.4.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "1.0.0",
+    "rollup": "4.63.1"
+  }
+}

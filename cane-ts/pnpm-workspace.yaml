@@ -1,0 +1,6 @@
+packages:
+  - cane-core
+  - cane-pixi-v8
+  - cane-layaair-3.4.1
+  - cane-cocos-3.8.8
+autoInstallPeers: false

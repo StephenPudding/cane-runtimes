@@ -1,0 +1,47 @@
+{
+  "name": "@cane-runtime/pixi-v8",
+  "version": "0.1.0",
+  "private": true,
+  "description": "High-performance PixiJS v8 runtime for Cane Runtime v1 players and render packets.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/iife/cane-pixi-v8.min.js",
+  "jsdelivr": "./dist/iife/cane-pixi-v8.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "scripts": {
+    "build": "tsc -b && pnpm run bundle:iife",
+    "bundle:iife": "rollup --config rollup.config.mjs",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@cane-runtime/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "pixi.js": "8.18.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "1.0.0",
+    "pixi.js": "8.18.1",
+    "rollup": "4.63.1"
+  }
+}

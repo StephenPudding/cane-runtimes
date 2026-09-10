@@ -1,0 +1,26 @@
+{
+  "name": "@cane-runtime/cane-ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent TypeScript runtimes for Cane assets and JavaScript rendering engines.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "workspaces": [
+    "cane-core",
+    "cane-pixi-v8",
+    "cane-layaair-3.4.1",
+    "cane-cocos-3.8.8"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter @cane-runtime/layaair-3.4.1 verify:sdk && pnpm --filter @cane-runtime/cocos-3.8.8 verify:sdk && tsc -b && pnpm --filter @cane-runtime/pixi-v8 bundle:iife && pnpm --filter @cane-runtime/layaair-3.4.1 bundle:iife",
+    "clean": "tsc -b --clean",
+    "typecheck": "pnpm --filter @cane-runtime/layaair-3.4.1 verify:sdk && pnpm --filter @cane-runtime/cocos-3.8.8 verify:sdk && tsc -b --pretty false"
+  },
+  "devDependencies": {
+    "typescript": ">=5.7.0 <7"
+  },
+  "packageManager": "pnpm@11.1.1"
+}

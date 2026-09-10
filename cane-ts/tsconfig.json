@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./cane-core"
+    },
+    {
+      "path": "./cane-pixi-v8"
+    },
+    {
+      "path": "./cane-layaair-3.4.1"
+    },
+    {
+      "path": "./cane-cocos-3.8.8"
+    }
+  ]
+}
