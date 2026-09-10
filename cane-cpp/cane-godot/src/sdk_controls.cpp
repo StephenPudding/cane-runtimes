@@ -42,7 +42,7 @@ bool CaneSkeleton::install_skin(const godot::Ref<CaneRuntimeSkin>& skin) {
     }, {}, {});
 }
 godot::Dictionary CaneSkeleton::get_slot_state(const godot::String& id) {
-    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { result = slot_snapshot_value(p.query_slot_state(text(id))); }); return result;
+    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { assign_dictionary(result, slot_snapshot_value(p.query_slot_state(text(id)))); }); return result;
 }
 godot::Array CaneSkeleton::get_slot_states() {
     godot::Array result; query_player([&](const cane::RuntimePlayer& p) { for (const auto& state : p.query_slot_states()) result.push_back(slot_snapshot_value(state)); }); return result;
@@ -51,10 +51,10 @@ godot::Variant CaneSkeleton::get_sequence_index(const godot::String& id) {
     godot::Variant result; query_player([&](const cane::RuntimePlayer& p) { result = p.query_sequence_index(text(id)); }); return result;
 }
 godot::Dictionary CaneSkeleton::get_authoring_snapshot() {
-    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { result = authoring_snapshot_value(p.query_authoring_snapshot()); }); return result;
+    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { assign_dictionary(result, authoring_snapshot_value(p.query_authoring_snapshot())); }); return result;
 }
 CaneSkeleton* CaneSkeleton::clone_configuration() {
-    if (busy_) { last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, "cloneConfiguration", "Reentrant player mutation.")); return nullptr; }
+    if (busy_) { set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, "cloneConfiguration", "Reentrant player mutation.")); return nullptr; }
     busy_ = true; GeometryOwnerScope owner_scope(get_instance_id()); CaneSkeleton* result = nullptr;
     try {
         require(player_ != nullptr, "No skeleton data is assigned.", "skeleton_data");
@@ -64,7 +64,7 @@ CaneSkeleton* CaneSkeleton::clone_configuration() {
         last_error_.clear(); busy_ = false; return result;
     } catch (const std::exception& failure) {
         if (result) memdelete(result);
-        last_error_ = error(failure); busy_ = false; return nullptr;
+        set_error(last_error_, failure); busy_ = false; return nullptr;
     }
 }
 }

@@ -49,11 +49,11 @@ void CaneBounds::_bind_methods() {
 }
 bool CaneBounds::query(const std::function<void()>& action) {
     try { action(); last_error_.clear(); return true; }
-    catch (const std::exception& failure) { last_error_ = error(failure); return false; }
+    catch (const std::exception& failure) { set_error(last_error_, failure); return false; }
 }
 void CaneBounds::write(const cane::RuntimePlayer& player, const cane::BoundsOptions& options) {
     try { player.write_bounds(bounds_, options); last_error_.clear(); }
-    catch (const std::exception& failure) { last_error_ = error(failure); throw; }
+    catch (const std::exception& failure) { set_error(last_error_, failure); throw; }
 }
 godot::Dictionary CaneBounds::get_snapshot() {
     godot::Dictionary result;
@@ -61,19 +61,19 @@ godot::Dictionary CaneBounds::get_snapshot() {
     return result;
 }
 godot::Dictionary CaneBounds::get_aabb() {
-    godot::Dictionary result; query([&] { result = aabb_value(bounds_.aabb()); }); return result;
+    godot::Dictionary result; query([&] { assign_dictionary(result, aabb_value(bounds_.aabb())); }); return result;
 }
 godot::Array CaneBounds::get_polygons() {
     godot::Array result; query([&] { result = polygon_values(bounds_); }); return result;
 }
 godot::Dictionary CaneBounds::get_polygon(const godot::String& id) {
-    godot::Dictionary result; query([&] { if (const auto* value = bounds_.polygon_for_attachment(text(id))) result = polygon_value(*value); }); return result;
+    godot::Dictionary result; query([&] { if (const auto* value = bounds_.polygon_for_attachment(text(id))) assign_dictionary(result, polygon_value(*value)); }); return result;
 }
 godot::Dictionary CaneBounds::contains_point(const godot::Vector2& point) {
-    godot::Dictionary result; query([&] { if (const auto* value = bounds_.contains_point(core_point(point, "core_point"))) result = hit_value(*value); }); return result;
+    godot::Dictionary result; query([&] { if (const auto* value = bounds_.contains_point(core_point(point, "core_point"))) assign_dictionary(result, hit_value(*value)); }); return result;
 }
 godot::Dictionary CaneBounds::intersects_segment(const godot::Vector2& start, const godot::Vector2& end) {
-    godot::Dictionary result; query([&] { if (const auto* value = bounds_.intersects_segment(core_point(start, "core_start"), core_point(end, "core_end"))) result = hit_value(*value); }); return result;
+    godot::Dictionary result; query([&] { if (const auto* value = bounds_.intersects_segment(core_point(start, "core_start"), core_point(end, "core_end"))) assign_dictionary(result, hit_value(*value)); }); return result;
 }
 godot::Variant CaneBounds::get_point_hits(const godot::Vector2& point) {
     godot::Variant result; query([&] { bounds_.write_point_hits(core_point(point, "core_point"), hits_); result = hit_values(hits_); }); return result;

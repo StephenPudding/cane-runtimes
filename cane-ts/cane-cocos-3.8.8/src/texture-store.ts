@@ -17,6 +17,8 @@ import type {
 } from "@cane-runtime/core";
 import { CaneCocosErrorV1 } from "./errors.js";
 import { resolveAssetUrlV1, textureKeyV1, texturePathV1 } from "./geometry.js";
+import { runtimeTextureDescriptorsV1 } from "./texture-descriptors.js";
+export { runtimeTextureDescriptorsV1 } from "./texture-descriptors.js";
 
 export type CaneCocosResourceKindV1 = "runtime" | "atlas" | "texture";
 export type CaneCocosTextureStoreChangeV1 = "bindingsChanged" | "contextLost" | "contextRestored";
@@ -689,42 +691,6 @@ export class CocosTextureStore {
     this.#operationTail = result.then(() => undefined, () => undefined);
     return result;
   }
-}
-
-export function runtimeTextureDescriptorsV1(data: RuntimeDataV1): Map<string, RuntimeTextureV1> {
-  const resources = new Map<string, RuntimeTextureV1>();
-  for (const image of data.document.images) {
-    if (image.atlasId === null) {
-      if (image.path === null) continue;
-      const descriptor: RuntimeTextureV1 = {
-        kind: "direct",
-        imageId: image.imageId,
-        path: image.path,
-        colorSpace: "srgb",
-        alphaMode: "straight",
-      };
-      resources.set(textureKeyV1(descriptor), descriptor);
-      continue;
-    }
-    const atlas = data.atlas(image.atlasId);
-    if (atlas === null) throw missingTextureV1(image.atlasId, "atlasId");
-    const region = atlas.regions.find((candidate) => candidate.imageId === image.imageId);
-    if (region === undefined) throw missingTextureV1(image.imageId, "region");
-    const page = atlas.pages.find((candidate) => candidate.pageId === region.pageId);
-    if (page === undefined) throw missingTextureV1(region.pageId, "page");
-    const descriptor: RuntimeTextureV1 = {
-      kind: "atlas",
-      imageId: image.imageId,
-      atlasId: atlas.atlasId,
-      pageId: page.pageId,
-      pagePath: page.image,
-      regionId: region.regionId,
-      colorSpace: atlas.colorSpace,
-      alphaMode: atlas.alphaMode,
-    };
-    resources.set(textureKeyV1(descriptor), descriptor);
-  }
-  return resources;
 }
 
 function acquireSharedLeaseV1(

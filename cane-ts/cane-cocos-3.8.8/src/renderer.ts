@@ -50,6 +50,9 @@ type CaneStaticAccessorV1 = ReturnType<typeof RenderData.createStaticVBAccessor>
 
 let sharedAccessorV1: CaneStaticAccessorV1 | null = null;
 let sharedAccessorDeviceV1: object | null = null;
+// Resource replacement can stage a new renderer on the same Native component.
+// Only the renderer that last submitted may clear that component's draw infos.
+const nativeSubmissionOwnerV1 = new WeakMap<UIRenderer, CaneCocosRendererV1>();
 
 export interface CaneCocosRendererHostV1 {
   readonly component: UIRenderer;
@@ -376,7 +379,10 @@ export class CaneCocosRendererV1 implements CaneCocosProjectionV1 {
 
   destroy(): void {
     if (this.#destroyed) return;
-    this.#nativeBridge.clear(this.#host.component);
+    if (nativeSubmissionOwnerV1.get(this.#host.component) === this) {
+      this.#nativeBridge.clear(this.#host.component);
+      nativeSubmissionOwnerV1.delete(this.#host.component);
+    }
     this.#materials.destroy();
     if (this.#renderData !== null) {
       RenderData.remove(this.#renderData);
@@ -555,6 +561,7 @@ export class CaneCocosRendererV1 implements CaneCocosProjectionV1 {
       );
       data.accessor.getMeshBuffer(data.chunk.bufferId).setDirty();
     }
+    nativeSubmissionOwnerV1.set(this.#host.component, this);
     this.#nativeBridge.prepare(
       this.#host.component,
       data,

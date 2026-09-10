@@ -463,6 +463,13 @@ export function parseAtlasDocumentV1(input: unknown, field = "atlas"): AtlasDocu
   );
   ensureUniqueIds(pages, "pageId", `${field}.pages`, "loadAtlasJson");
   ensureUniqueIds(pages, "image", `${field}.pages.image`, "loadAtlasJson");
+  for (const [index, page] of pages.entries()) {
+    const expected = `${name}${index === 0 ? "" : `-${index + 1}`}.png`;
+    if (page.image !== expected) {
+      atlasFail("validationFailed", `${field}.pages[${index}].image`,
+        "Atlas page name must match its native name and page order.", page.pageId);
+    }
+  }
   ensureUniqueIds(regions, "regionId", `${field}.regions`, "loadAtlasJson");
   ensureUniqueIds(regions, "imageId", `${field}.regions.imageId`, "loadAtlasJson");
 

@@ -42,7 +42,7 @@ namespace Cane.Unity
                     if (isActiveAndEnabled)
                     {
                         start = Stopwatch.GetTimestamp();
-                        preparedProjection = new CaneMeshProjection();
+                        preparedProjection = new CaneMeshProjection(null, preparedAsset.MaterialTemplates);
                         preparedProjection.Upload(frame, preparedAsset);
                         preparedProjection.InheritUploadCount(projection);
                         uploadTicks = Stopwatch.GetTimestamp() - start;

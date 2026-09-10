@@ -17,6 +17,10 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./browser": {
+      "types": "./dist/browser-entry.d.ts",
+      "import": "./dist/esm/cane-layaair-3.4.1.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -40,6 +44,11 @@
   },
   "peerDependencies": {
     "layaair": "3.4.1"
+  },
+  "peerDependenciesMeta": {
+    "layaair": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@rollup/plugin-terser": "1.0.0",

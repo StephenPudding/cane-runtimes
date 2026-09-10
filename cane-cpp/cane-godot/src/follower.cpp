@@ -41,7 +41,7 @@ void CaneFollower2D::_bind_methods() {
 }
 bool CaneFollower2D::writable() {
     if (!updating_) return true;
-    last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, operation_id(), "Reentrant follower mutation.")); return false;
+    set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, operation_id(), "Reentrant follower mutation.")); return false;
 }
 void CaneFollower2D::disconnect_source() {
     if (auto* source = skeleton_instance(source_id_)) source->unregister_pose_follower(get_instance_id());
@@ -73,7 +73,7 @@ void CaneFollower2D::set_skeleton_path(const godot::NodePath& value) {
 void CaneFollower2D::set_offset_transform(const godot::Transform2D& value) {
     if (!writable()) return;
     if (!value.is_finite()) {
-        last_error_ = error(cane::Error(cane::ErrorCode::non_finite, operation_id(), "Follower offset must be finite.", "offset_transform"));
+        set_error(last_error_, cane::Error(cane::ErrorCode::non_finite, operation_id(), "Follower offset must be finite.", "offset_transform"));
         emit_signal("follow_error", last_error_.duplicate(true)); return;
     }
     offset_ = value; (void)refresh_follow();

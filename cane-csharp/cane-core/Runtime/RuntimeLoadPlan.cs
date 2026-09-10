@@ -4,6 +4,14 @@ using Cane.Format;
 
 namespace Cane
 {
+    /// <summary>Owned source dependency metadata; file acquisition remains in the host.</summary>
+    public sealed class RuntimeAtlasReference
+    {
+        public string AtlasId { get; }
+        public string Path { get; }
+        internal RuntimeAtlasReference(string atlasId, string path) { AtlasId = atlasId; Path = path; }
+    }
+
     /// <summary>A renderer-neutral decode request. Missing declared dimensions stay null until the host observes pixels.</summary>
     public sealed class RuntimeTextureRequest
     {
@@ -47,6 +55,25 @@ namespace Cane
         private readonly bool compatibilityOption;
         public IReadOnlyList<RuntimeTextureRequest> TextureRequests { get; }
         public IReadOnlyList<RuntimeWarning> Warnings { get; }
+
+        /// <summary>Inspect declared atlas paths before supplying atlas documents to the load plan.
+        /// This validates the source container/header and references; CreateData still performs full validation.</summary>
+        public static IReadOnlyList<RuntimeAtlasReference> InspectAtlasReferences(byte[] source) => Wrap("inspectDependencies", () => {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            bool binary = source.Length >= 5 && source[0] == 'C' && source[1] == 'A' && source[2] == 'N' && source[3] == 'E' && source[4] == 'B';
+            Json doc = binary ? Caneb.Decode(source, out _) : Json.Parse(source);
+            Validation.Root(doc);
+            var references = new List<RuntimeAtlasReference>();
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Json row in doc["atlases"].Items) {
+                Validation.Closed(row, "atlasId path", "atlasId path");
+                string id = Validation.Id(row, "atlasId"), path = row.S("path");
+                Validation.Path(path);
+                if (!ids.Add(id)) throw new RuntimeException(RuntimeErrorCode.ValidationFailed, "inspectDependencies", "Duplicate atlas ID.", "atlasId", id);
+                references.Add(new RuntimeAtlasReference(id, path));
+            }
+            return (IReadOnlyList<RuntimeAtlasReference>)references.AsReadOnly();
+        });
 
         public static RuntimeLoadPlan FromJson(string json, RuntimeLoadOptions? options = null) =>
             Wrap("prepareJson", () => new RuntimeLoadPlan(Json.Parse(json), options ?? new RuntimeLoadOptions(), Array.Empty<string>()));

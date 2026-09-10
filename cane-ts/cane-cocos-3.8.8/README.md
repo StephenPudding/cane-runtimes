@@ -6,6 +6,23 @@ Cane Runtime adapter for exactly **Cocos Creator 3.8.8**. The package remains
 `private: true` and `UNLICENSED`. It depends on Creator's virtual `cc` module
 and does not bundle a second Cocos Engine.
 
+## Install and open an example
+
+Download the Creator 3.8.8 extension from the release, extract its `cane-runtime`
+folder into your project's `extensions`, and reopen the project. Core, the adapter,
+the color Effect and type declarations are prebuilt; users do not need Node.js
+or a separate Runtime compilation step.
+
+Import the Runtime JSON/CANEB, Atlas JSON and images together, preserving relative
+paths. Drag the skeleton resource under a 2D Canvas, choose animation, skins,
+loop and speed in the Inspector, and use Play preview. Save the scene, then run
+or build it with Creator. The companion Cane Bot example contains a saved scene,
+four animations, two skins and original redistributable artwork.
+
+See the [editor workflow](docs/EDITOR_WORKFLOW.md) or its
+[Chinese version](docs/EDITOR_WORKFLOW.zh-CN.md). The APIs below are also available
+for programmatic loading and character control.
+
 `@cane-runtime/core` is authoritative for animation, mixing, bones, constraints,
 Physics, deform, clipping, tint and final geometry. This package owns Cocos resources,
 lifecycle, coordinates, scene objects, GPU uploads and submission. An ordinary
@@ -103,6 +120,18 @@ pnpm --filter @cane-runtime/cocos-3.8.8 build
 
 The output is standard ESM and `.d.ts`. Creator's builder resolves `cc`; the adapter
 cannot execute independently of Cocos in an ordinary browser or Node environment.
+
+## Prebuilt Creator extension
+
+The editor extension bundles Core, the adapter, declarations and color Effect.
+Install it in `extensions/cane-runtime`, import Cane JSON/CANEB with its Atlas
+and images, then configure a `CaneSkeleton` in a 2D scene. See
+[installation and editor workflow](docs/EDITOR_WORKFLOW.md) or the
+[Chinese guide](docs/EDITOR_WORKFLOW.zh-CN.md). Imported assets reference their
+Effect automatically; the manual Effect setup above applies to programmatic loading.
+
+Creator scripts using the extension import from
+`db://cane-runtime/cane-runtime.mjs`. Do not install a second runtime copy.
 
 ## Building from source
 

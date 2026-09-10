@@ -4,11 +4,19 @@ The adapter consumes one final Core packet per publication. A draw retains its
 material state and only sends changed uniforms to Godot. Shader changes initialize
 all uniforms; texture RID, tint (including absent versus black dark tint), alpha
 mode and independent filtering/wrapping changes remain observable. Each successful
-publication still validates resources and uploads final geometry in packet order. Adjacent Normal or Add attachments with identical texture RID, light/dark tint,
+publication still validates resources and uploads final geometry in packet order. On Forward+ and other linear canvases, adjacent Normal or Add attachments with identical texture RID, light/dark tint,
 alpha, color space, PMA and sampling state share a triangle-array submission. The adapter copies Core's final positions/UVs and rebases indices; it does not
 weld vertices, change triangle order or evaluate geometry. Batches stop at 65,536
 vertices and at game-content Slot boundaries, including empty and clipped Slots. Multiply/Screen still copy the destination before each triangle, preserving
 self-overlap. This optimization does not change Core evaluation or skip frames.
+
+Compatibility uses an sRGB canvas even with HDR 2D in Godot 4.5–4.7. It requires a
+destination copy for every group of disjoint triangles to preserve linear blend
+math and display the correct colors. Groups preserve packet order, material and
+Slot boundaries and contain at most 64 triangles, bounding CPU overlap checks.
+Self-overlapping geometry starts a new group. `unbatched_draws` on this backend
+counts triangles, while `backbuffer_copies` equals `draws`. Prefer Forward+ when
+many animated instances or heavily overlapping meshes make these copies costly.
 
 `get_render_stats()` exposes per-publication `material_parameter_writes` and
 `material_shader_changes`, alongside `core_usec`, `upload_usec`, draw/triangle/

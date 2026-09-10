@@ -180,7 +180,7 @@ bool CaneSkeleton::advance_physics(double delta) {
     return perform([&](cane::RuntimePlayer& p) { (void)p.advance_physics(scalar(delta, "delta_seconds")); }, false);
 }
 godot::Dictionary CaneSkeleton::get_root_pose() {
-    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { result = region_value(p.root_transform()); }); return result;
+    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { assign_dictionary(result, region_value(p.root_transform())); }); return result;
 }
 godot::Dictionary CaneSkeleton::get_bone_pose(const godot::String& id) {
     godot::Dictionary result;
@@ -192,6 +192,6 @@ godot::Dictionary CaneSkeleton::get_bone_pose(const godot::String& id) {
     }); return result;
 }
 godot::Dictionary CaneSkeleton::get_region_pose(const godot::String& id) {
-    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { result = region_value(p.query_region_attachment_pose(text(id))); }); return result;
+    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { assign_dictionary(result, region_value(p.query_region_attachment_pose(text(id)))); }); return result;
 }
 }

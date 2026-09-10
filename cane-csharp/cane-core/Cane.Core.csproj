@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Cane.Core</AssemblyName>
     <RootNamespace>Cane</RootNamespace>
-    <Version>0.1.0-alpha.4</Version>
+    <Version>0.1.0-alpha.5</Version>
     <Description>Independent, engine-neutral Cane C# animation runtime.</Description>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageReadmeFile>README.md</PackageReadmeFile>

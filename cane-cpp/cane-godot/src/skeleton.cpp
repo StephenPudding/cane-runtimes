@@ -32,9 +32,10 @@ godot::PackedFloat32Array floats(const std::vector<float>& values) {
 }
 }
 CaneSkeleton::CaneSkeleton() { set_process(true); set_notify_transform(true); set_notify_local_transform(true); }
-CaneSkeleton::~CaneSkeleton() { detach_slot_nodes(); }
+CaneSkeleton::~CaneSkeleton() { connect_data_resource({}); detach_slot_nodes(); }
 void CaneSkeleton::_bind_methods() {
     bind_sdk_methods();
+    bind_configuration_methods();
     using godot::ClassDB; using godot::D_METHOD;
     ClassDB::bind_method(D_METHOD("set_skeleton_data", "data"), &CaneSkeleton::set_skeleton_data);
     ClassDB::bind_method(D_METHOD("get_skeleton_data"), &CaneSkeleton::get_skeleton_data);
@@ -82,27 +83,29 @@ void CaneSkeleton::_notification(int what) {
     if (what == NOTIFICATION_EXIT_TREE) { follow_source_available_ = false; sync_pose_followers(); sync_slot_nodes(); detach_slot_nodes(); projection_.clear(); projected_ = false; }
     else if (what == NOTIFICATION_ENTER_TREE) {
         follow_source_available_ = true;
-        if (player_) try { publish(); sync_pose_followers(); sync_slot_nodes(); } catch (const std::exception& failure) { last_error_ = error(failure); emit_signal("runtime_error", last_error_.duplicate(true)); }
+        if (player_) try { publish(); sync_pose_followers(); sync_slot_nodes(); } catch (const std::exception& failure) { set_error(last_error_, failure); emit_signal("runtime_error", last_error_.duplicate(true)); }
     }
     else if (what == NOTIFICATION_CHILD_ORDER_CHANGED) sync_slot_nodes();
     else if ((what == NOTIFICATION_TRANSFORM_CHANGED || what == NOTIFICATION_LOCAL_TRANSFORM_CHANGED || what == NOTIFICATION_VISIBILITY_CHANGED) && is_inside_tree()) sync_pose_followers();
 }
 void CaneSkeleton::set_skeleton_data(const godot::Ref<CaneSkeletonData>& data) {
-    if (busy_) { last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, "godotAdapter", "Reentrant player mutation.")); return; }
+    if (busy_) { set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, "godotAdapter", "Reentrant player mutation.")); return; }
     busy_ = true; GeometryOwnerScope owner_scope(get_instance_id());
     try {
         if (data.is_null()) {
             detach_slot_nodes(); projection_.clear(); projected_ = false; notified_ = false; replay_events_.clear();
-            player_.reset(); asset_.reset(); source_asset_.reset(); data_resource_.unref(); slot_cache_valid_ = false; slot_states_.clear(); slot_indices_.clear();
+            player_.reset(); asset_.reset(); source_asset_.reset(); connect_data_resource({}); slot_cache_valid_ = false; slot_states_.clear(); slot_indices_.clear();
             last_error_.clear(); sync_pose_followers(); sync_slot_nodes(); busy_ = false; return;
         }
         auto asset = data->snapshot(); require(static_cast<bool>(asset), "CaneSkeletonData has no loaded asset.", "skeleton_data");
         auto player = std::make_unique<cane::RuntimePlayer>(asset->data);
+        if (!initial_animation_.is_empty()) player->set_animation(0, text(initial_animation_), initial_loop_);
+        if (!initial_skins_.is_empty()) player->set_skins(strings(initial_skins_));
         if (is_inside_tree()) require(get_viewport()->is_using_hdr_2d(), "Enable HDR 2D on the viewport for Cane linear color/blend rendering.", "viewport.use_hdr_2d");
-        asset_ = std::move(asset); source_asset_ = asset_; player_ = std::move(player); data_resource_ = data;
+        asset_ = std::move(asset); source_asset_ = asset_; player_ = std::move(player); connect_data_resource(data);
         projected_ = false; notified_ = false; slot_cache_valid_ = false; replay_events_.clear();
         publish(); last_error_.clear(); notify_frame();
-    } catch (const std::exception& failure) { last_error_ = error(failure); emit_signal("runtime_error", last_error_.duplicate(true)); }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); emit_signal("runtime_error", last_error_.duplicate(true)); }
     busy_ = false;
 }
 void CaneSkeleton::publish() {
@@ -131,7 +134,7 @@ void CaneSkeleton::notify_events() {
     notify_frame(false);
 }
 bool CaneSkeleton::perform(const std::function<void(cane::RuntimePlayer&)>& operation, bool evaluate) {
-    if (busy_) { last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, "godotAdapter", "Reentrant player mutation.")); return false; }
+    if (busy_) { set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, "godotAdapter", "Reentrant player mutation.")); return false; }
     busy_ = true; GeometryOwnerScope owner_scope(get_instance_id());
     try {
         require(player_ != nullptr, "No skeleton data is assigned.", "skeleton_data");
@@ -140,11 +143,14 @@ bool CaneSkeleton::perform(const std::function<void(cane::RuntimePlayer&)>& oper
         core_usec_ = godot::Time::get_singleton()->get_ticks_usec() - start;
         publish(); last_error_.clear(); notify_events(); busy_ = false; return true;
     } catch (const std::exception& failure) {
-        last_error_ = error(failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
+        set_error(last_error_, failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
     }
 }
 void CaneSkeleton::_process(double delta) {
-    if (automatic_ && player_ && !godot::Engine::get_singleton()->is_editor_hint() && !advance(delta)) set_automatic(false);
+    const bool preview = godot::Engine::get_singleton()->is_editor_hint();
+    if (player_ && playback_speed_ > 0 && (preview ? editor_preview_ : automatic_) && !advance(delta * playback_speed_)) {
+        if (preview) set_editor_preview(false); else set_automatic(false);
+    }
 }
 bool CaneSkeleton::advance(double delta) { return perform([&](cane::RuntimePlayer& player) { (void)player.advance(scalar(delta, "delta_seconds")); }, false); }
 bool CaneSkeleton::apply() { return perform([](cane::RuntimePlayer&) {}, true); }
@@ -211,13 +217,13 @@ godot::Transform2D CaneSkeleton::get_bone_transform(const godot::String& bone_id
         require(player_ != nullptr, "No skeleton data is assigned.", "skeleton_data");
         const auto matrix = player_->query_bone_pose(text(bone_id)).matrix; last_error_.clear();
         return {{matrix.a, -matrix.b}, {-matrix.c, matrix.d}, {matrix.tx, -matrix.ty}};
-    } catch (const std::exception& failure) { last_error_ = error(failure); return {}; }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); return {}; }
 }
 bool CaneSkeleton::query_player(const std::function<void(const cane::RuntimePlayer&)>& query) {
     try {
         require(player_ != nullptr, "No skeleton data is assigned.", "skeleton_data");
         query(*player_); last_error_.clear(); return true;
-    } catch (const std::exception& failure) { last_error_ = error(failure); return false; }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); return false; }
 }
 godot::Dictionary CaneSkeleton::get_point_pose(const godot::String& id) {
     godot::Dictionary result;
@@ -229,7 +235,7 @@ godot::Dictionary CaneSkeleton::get_point_pose(const godot::String& id) {
         result["transform"] = transform; result["position"] = transform.get_origin();
         result["rotation_degrees"] = -pose.rotation_degrees; result["active"] = pose.active; result["selected"] = pose.selected;
         last_error_.clear();
-    } catch (const std::exception& failure) { last_error_ = error(failure); }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); }
     return result;
 }
 godot::PackedStringArray CaneSkeleton::get_point_attachment_ids() const {

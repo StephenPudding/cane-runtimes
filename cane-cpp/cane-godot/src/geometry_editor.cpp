@@ -73,7 +73,7 @@ void CaneGeometryEditor::_bind_methods() {
 bool CaneGeometryEditor::run(const std::function<void()>& action) {
     try { action(); if (!first_error_) last_error_.clear(); return true; }
     catch (const std::exception& failure) {
-        last_error_ = error(failure);
+        set_error(last_error_, failure);
         if (callback_active_ && !first_error_) first_error_ = std::current_exception();
         return false;
     }
@@ -109,7 +109,7 @@ godot::Variant CaneGeometryEditor::get_position(const godot::Variant& i) {
 godot::Variant CaneGeometryEditor::get_uv(const godot::Variant& i) {
     godot::Variant r; run([&] { if (const auto p = editor_.uv(index_value(i))) r = godot::Vector2(p->x, p->y); }); return r;
 }
-godot::Dictionary CaneGeometryEditor::get_tint() { godot::Dictionary r; run([&] { r = tint_value(editor_.tint()); }); return r; }
+godot::Dictionary CaneGeometryEditor::get_tint() { godot::Dictionary r; run([&] { assign_dictionary(r, tint_value(editor_.tint())); }); return r; }
 godot::Dictionary CaneGeometryEditor::get_snapshot() {
     godot::Dictionary r;
     run([&] {

@@ -103,9 +103,29 @@ affine columns, including two-axis shear, reflection and negative scale; they do
 
 ## Browser bundle
 
+Prebuilt releases contain both `dist/esm/cane-layaair-3.4.1.js` and
+`dist/iife/cane-layaair-3.4.1.min.js`, plus matching Core/adapter npm tarballs and
+TypeScript declarations. These are runtime distributions; the IDE scene importer
+and Inspector workflow are not included yet.
+
+The ESM file is self-contained except for the official LayaAir engine. Load the
+engine first, then import this file directly, or use the package's
+`@cane-runtime/layaair-3.4.1/browser` entry. It exports the adapter API and the
+`Core` namespace without browser import maps or a separate Core download.
+
 `dist/iife/cane-layaair-3.4.1.min.js` embeds Cane Core plus this adapter, but not LayaAir. Load the
 exact engine first; the bundle then exports `globalThis.CaneLaya`, with Core available as
 `CaneLaya.Core`. Missing Laya produces an immediate descriptive error.
+
+For an npm-based consuming project, install both supplied tarballs together:
+
+```sh
+npm install ./cane-runtime-core-0.1.0.tgz ./cane-runtime-layaair-3.4.1-0.1.0.tgz
+```
+
+No Runtime compilation is needed. The optional npm peer prevents the installer
+from downloading an unrelated engine package; the official 3.4.1 engine must
+still be supplied by the host/IDE. Use the engine SDK's declarations for `Laya`.
 
 ## Renderer loss
 

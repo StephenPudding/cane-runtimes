@@ -53,7 +53,7 @@ godot::Dictionary CaneSkeletonData::get_metadata() {
         result["generator_name"] = text(metadata.generator_name); result["generator_version"] = text(metadata.generator_version);
         result["skeleton_id"] = text(skeleton.skeleton_id); result["name"] = text(skeleton.name); result["reference_scale"] = skeleton.reference_scale;
         result["required_features"] = names(loaded_->data.required_features()); last_error_.clear();
-    } catch (const std::exception& failure) { result.clear(); last_error_ = error(failure); }
+    } catch (const std::exception& failure) { result.clear(); set_error(last_error_, failure); }
     return result;
 }
 godot::Array CaneSkeletonData::get_catalog(const godot::String& kind) {
@@ -64,14 +64,14 @@ godot::Array CaneSkeletonData::get_catalog(const godot::String& kind) {
             godot::Dictionary row; row["id"] = text(value.id); row["name"] = text(value.name); row["type"] = text(value.type); result.push_back(row);
         }
         last_error_.clear();
-    } catch (const std::exception& failure) { result.clear(); last_error_ = error(failure); }
+    } catch (const std::exception& failure) { result.clear(); set_error(last_error_, failure); }
     return result;
 }
 godot::String CaneSkeletonData::get_catalog_definition_json(const godot::String& kind, const godot::String& id) {
     try {
         require(static_cast<bool>(loaded_), "No asset has been loaded.", "skeleton_data");
         auto result = text(loaded_->data.catalog_definition_json(catalog_kind(kind), text(id))); last_error_.clear(); return result;
-    } catch (const std::exception& failure) { last_error_ = error(failure); return {}; }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); return {}; }
 }
 godot::Array CaneSkeletonData::get_load_warnings() {
     godot::Array result;
@@ -82,13 +82,13 @@ godot::Array CaneSkeletonData::get_load_warnings() {
             row["section_tag"] = text(value.section_tag); row["message"] = text(value.message()); result.push_back(row);
         }
         last_error_.clear();
-    } catch (const std::exception& failure) { result.clear(); last_error_ = error(failure); }
+    } catch (const std::exception& failure) { result.clear(); set_error(last_error_, failure); }
     return result;
 }
 godot::Array CaneSkeletonData::get_texture_resources() {
     try {
         require(static_cast<bool>(loaded_), "No asset has been loaded.", "skeleton_data");
         auto result = texture_resources_value(loaded_->data, *loaded_); last_error_.clear(); return result;
-    } catch (const std::exception& failure) { last_error_ = error(failure); return {}; }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); return {}; }
 }
 }

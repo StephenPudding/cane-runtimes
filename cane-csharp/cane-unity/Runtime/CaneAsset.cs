@@ -13,13 +13,14 @@ namespace Cane.Unity
         {
             internal readonly Texture2D Texture;
             private int references = 1;
-            internal TextureStorage(Texture2D texture) { Texture = texture; }
+            private readonly bool owned;
+            internal TextureStorage(Texture2D texture, bool owned = true) { Texture = texture; this.owned = owned; }
             internal void Retain()
             {
                 if (!Texture || references == 0) throw UnityObjects.Error("prepareResources", "A shared texture was destroyed outside its owner.");
                 checked { references++; }
             }
-            internal void Release() { if (--references == 0) UnityObjects.Release(Texture); }
+            internal void Release() { if (--references == 0 && owned) UnityObjects.Release(Texture); }
         }
 
         internal sealed class TextureEntry

@@ -73,15 +73,21 @@ namespace Cane.Unity
             LightId = Shader.PropertyToID("_CaneLight"), DarkId = Shader.PropertyToID("_CaneDark"),
             SamplingId = Shader.PropertyToID("_CaneSampling"), TextureFlagsId = Shader.PropertyToID("_CaneTextureFlags");
 
-        public CaneMeshProjection(Shader shader = null)
+        public CaneMeshProjection(Shader shader = null) : this(shader, null) { }
+        public CaneMeshProjection(Shader shader, IReadOnlyList<Material> templates)
         {
+            if (templates != null && templates.Count != 4) throw new ArgumentException("Cane requires four blend materials.", nameof(templates));
+            if (templates != null && templates[0]) shader = templates[0].shader;
             if (!shader) shader = Resources.Load<Shader>("CaneFinalPacket");
             if (!shader || !shader.isSupported) throw UnityObjects.Error("createProjection", "The Cane final-packet shader is missing or unsupported.");
             try
             {
                 for (int i = 0; i < materials.Length; i++)
                 {
-                    var material = UnityObjects.Own(new Material(shader) { name = "Cane blend " + i, hideFlags = HideFlags.HideAndDontSave });
+                    if (templates != null && (!templates[i] || !templates[i].shader || !templates[i].shader.isSupported))
+                        throw UnityObjects.Error("createProjection", "An imported Cane blend material is missing or unsupported.");
+                    var material = UnityObjects.Own(templates == null ? new Material(shader) : new Material(templates[i]));
+                    material.name = "Cane blend " + i; material.hideFlags = HideFlags.HideAndDontSave;
                     materials[i] = material;
                     material.SetInt("_CaneSrcRgb", (int)(i == 2 ? BlendMode.DstColor : BlendMode.One));
                     material.SetInt("_CaneDstRgb", (int)(i == 1 ? BlendMode.One : i == 3 ? BlendMode.OneMinusSrcColor : BlendMode.OneMinusSrcAlpha));

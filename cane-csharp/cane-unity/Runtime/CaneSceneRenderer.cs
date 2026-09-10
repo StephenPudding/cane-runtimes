@@ -28,7 +28,8 @@ namespace Cane.Unity
             {
                 foreach (CaneSkeleton skeleton in CaneSkeleton.Active)
                     if (skeleton && skeleton.isActiveAndEnabled && skeleton.Frame != null &&
-                        Application.IsPlaying(skeleton.gameObject) == Application.IsPlaying(camera.gameObject) &&
+                        Application.IsPlaying(skeleton.gameObject) == (Application.IsPlaying(camera.gameObject) ||
+                            (Application.isPlaying && camera.cameraType == CameraType.SceneView)) &&
                         (camera.cullingMask & (1 << skeleton.gameObject.layer)) != 0) skeletons.Add(skeleton);
                 skeletons.Sort(comparison);
                 foreach (CaneSkeleton skeleton in skeletons)

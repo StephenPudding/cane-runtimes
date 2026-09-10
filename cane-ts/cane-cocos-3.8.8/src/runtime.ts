@@ -404,6 +404,11 @@ export class CaneCocosRuntime {
   setSkin(idOrName: string | null): RuntimeFrameV1 {
     return this.#acceptPublishedFrame(this.controller.setSkin(idOrName));
   }
+
+  /** Ordered composition uses stable Core skin IDs. */
+  setSkins(skinIds: readonly string[]): RuntimeFrameV1 {
+    return this.#acceptPublishedFrame(this.player.setSkins(skinIds));
+  }
   setAttachment(slotIdOrName: string, attachmentIdOrName: string | null): RuntimeFrameV1 {
     return this.#acceptPublishedFrame(this.controller.setAttachment(slotIdOrName, attachmentIdOrName));
   }

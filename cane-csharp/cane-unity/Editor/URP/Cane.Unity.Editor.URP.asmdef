@@ -1,0 +1,8 @@
+{
+  "name": "Cane.Unity.Editor.URP",
+  "references": ["Cane.Unity.Editor", "Cane.Unity.URP", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true,
+  "defineConstraints": ["CANE_URP"],
+  "versionDefines": [{"name": "com.unity.render-pipelines.universal", "expression": "[17.3.0,18.0.0)", "define": "CANE_URP"}]
+}

@@ -59,7 +59,7 @@ template<class T> godot::Array resource_json(const std::vector<T>& resources) {
 }
 bool CaneSkeleton::change_resources(const std::function<void(cane::RuntimePlayer&, const cane::RuntimeResourceValidation&)>& operation,
     const godot::Dictionary& images, const godot::Dictionary& pages) {
-    if (busy_) { last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, "godotResources", "Reentrant player mutation.")); return false; }
+    if (busy_) { set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, "godotResources", "Reentrant player mutation.")); return false; }
     busy_ = true; GeometryOwnerScope owner_scope(get_instance_id());
     try {
         require(player_ && source_asset_, "No skeleton data is assigned.", "skeleton_data");
@@ -84,7 +84,7 @@ bool CaneSkeleton::change_resources(const std::function<void(cane::RuntimePlayer
         projected_ = is_inside_tree(); projected_sequence_ = player_->frame().sequence();
         last_error_.clear(); notify_events(); busy_ = false; return true;
     } catch (const std::exception& failure) {
-        last_error_ = error(failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
+        set_error(last_error_, failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
     }
 }
 bool CaneSkeleton::apply_runtime_resources(const godot::Array& changes, const godot::Dictionary& images, const godot::Dictionary& pages) {

@@ -52,7 +52,7 @@ namespace Cane.Unity
                         : DecodedTextureDimensions.AtlasPage(resource.AtlasId, resource.PageId, entry.Texture.width, entry.Texture.height));
                 }
                 data.ValidateDecodedTextureCatalog(dimensions);
-                return new CaneAsset(data, entries) { imageOverlays = images, atlasOverlays = atlases };
+                return new CaneAsset(data, entries) { imageOverlays = images, atlasOverlays = atlases, MaterialTemplates = source.MaterialTemplates };
             }
             catch { foreach (TextureEntry entry in entries.Values) entry.Release(); throw; }
         }

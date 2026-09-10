@@ -5,6 +5,19 @@
 完整面向 **Cocos Creator 3.8.8** 的 Cane Runtime 适配器。包保持 `private: true`、
 `UNLICENSED`，并严格依赖 Creator 提供的虚拟 `cc` 模块，不包含第二份 Cocos Engine。
 
+## 安装和打开示例
+
+下载发行版中的 Creator 3.8.8 插件，将解压得到的 `cane-runtime` 文件夹放入工程的
+`extensions`，再重新打开工程。Core、适配器、颜色 Effect 和类型声明均已构建好，
+无需安装 Node.js 或单独编译 Runtime。
+
+将 Runtime JSON/CANEB、Atlas JSON 和图片一起导入，保留相对路径。
+把骨骼资源拖到 2D Canvas 下，在 Inspector 中设置动画、皮肤、循环和速度，
+点击播放预览。保存场景后即可使用 Creator 运行和构建游戏。
+配套 Cane Bot 示例包含保存好的场景、4 个动画、2 套皮肤和可分发的原创素材。
+
+完整步骤见[中文编辑器说明](docs/EDITOR_WORKFLOW.zh-CN.md)。下方 API 也可用于代码加载和控制角色。
+
 `@cane-runtime/core` 是动画、混合、骨骼、约束、Physics、deform、clipping、tint 与最终
 几何的唯一权威。该包只负责 Cocos 资源、生命周期、坐标、场景对象、GPU 上传与提交；正常
 一帧始终只有一次 Core sample、一次 solve 和一次 publish。
@@ -28,6 +41,14 @@
   求值，因此不会形成第二套动画状态。
 
 ## 最小用法
+
+推荐使用预构建的 Creator 扩展：包含 Core、适配器、类型声明和颜色 Effect，
+无需手动编译。把扩展放到工程 `extensions/cane-runtime`，一起导入骨骼、Atlas
+和图片，再配置场景中的 `CaneSkeleton`。详见
+[安装、导入与编辑器预览](docs/EDITOR_WORKFLOW.zh-CN.md)。
+此方式会自动引用 Effect；下面的手动加载方法保留给编程接入。
+
+扩展的脚本导入路径是 `db://cane-runtime/cane-runtime.mjs`，不要重复安装另一份 Runtime。
 
 在 Creator 脚本中导入并把组件加到带 `UITransform` 的节点：
 

@@ -91,7 +91,7 @@ void CaneSkeleton::sync_slot_nodes() {
         const bool arranged = !mounts.empty();
         if (arranged || slots_arranged_) projection_.arrange_slots(slot_states_, std::move(mounts));
         slots_arranged_ = arranged;
-    } catch (const std::exception& failure) { last_error_ = error(failure); }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); }
     syncing_slots_ = false;
 }
 }

@@ -88,9 +88,26 @@ Cane 的坐标为 X 向右、Y 向上；Laya 的坐标为 X 向右、Y 向下。
 
 ## 浏览器脚本包
 
+预构建发行包提供 `dist/esm/cane-layaair-3.4.1.js`、
+`dist/iife/cane-layaair-3.4.1.min.js`、配套的 Core/适配器 npm 压缩包及 TypeScript 类型声明。
+这些是 Runtime 发行文件；目前还不包含 IDE 场景导入器和 Inspector 操作流程。
+
+ESM 文件已内嵌 Core。先加载官方引擎，再直接导入该文件，或使用
+`@cane-runtime/layaair-3.4.1/browser` 包入口。它导出适配器 API 和 `Core` 命名空间，
+浏览器无需配置 import map，也无需另行加载 Core。
+
 `dist/iife/cane-layaair-3.4.1.min.js` 内嵌 Cane Core 和本适配器，不包含 LayaAir。
 先加载指定版本的引擎，再加载脚本包；后者导出 `globalThis.CaneLaya`，其中 Core 位于 `CaneLaya.Core`。
 缺少 Laya 时会立即给出明确错误。
+
+使用 npm 的工程可以一起安装发行包附带的两个压缩包：
+
+```sh
+npm install ./cane-runtime-core-0.1.0.tgz ./cane-runtime-layaair-3.4.1-0.1.0.tgz
+```
+
+无需编译 Runtime。npm 中的引擎 peer 设为可选，避免自动下载不匹配的同名包；
+宿主或 IDE 仍须提供官方 3.4.1 引擎，`Laya` 的类型声明也使用该版本 SDK。
 
 ## 渲染上下文丢失
 

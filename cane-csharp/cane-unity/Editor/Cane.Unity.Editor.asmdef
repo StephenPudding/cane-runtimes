@@ -1,0 +1,7 @@
+{
+  "name": "Cane.Unity.Editor",
+  "rootNamespace": "Cane.Unity.Editor",
+  "references": ["Cane.Core", "Cane.Unity"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

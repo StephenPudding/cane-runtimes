@@ -2,7 +2,10 @@ import {
   Asset,
   BufferAsset,
   CCString,
+  EffectAsset,
   JsonAsset,
+  Layers,
+  Node,
   Texture2D,
   _decorator,
 } from "cc";
@@ -23,6 +26,8 @@ import {
   type CaneCocosTextureDecoderV1,
 } from "./texture-store.js";
 import { textureKeyV1 } from "./geometry.js";
+import type { CaneSkeleton } from "./skeleton.js";
+import { readCaneAssetNativeDataV1 } from "./internal-bridge.js";
 
 const { ccclass, property } = _decorator;
 
@@ -93,6 +98,19 @@ export class CaneCocosAssetV1 {
  */
 @ccclass("cane.CaneSkeletonDataAsset")
 export class CaneSkeletonDataAsset extends Asset {
+  // Embedded documents are plain serializable data. Creator's game packer
+  // removes inline Asset objects that have no UUID, even though its Editor
+  // loader accepts them. Keep legacy external JsonAsset references below.
+  @property({ visible: false })
+  private _runtimeDocument: unknown = null;
+
+  @property({ visible: false })
+  private _atlasDocuments: unknown[] = [];
+
+  /** Assigned by the importer; retained by Creator's game dependency graph. */
+  @property({ type: EffectAsset })
+  colorEffectAsset: EffectAsset | null = null;
+
   @property({ type: JsonAsset })
   runtimeJson: JsonAsset | null = null;
 
@@ -109,32 +127,92 @@ export class CaneSkeletonDataAsset extends Asset {
   @property({ type: [Texture2D] })
   textures: Texture2D[] = [];
 
-  async instantiate(options: Omit<CaneCocosAssetLoadOptionsV1, "atlases"> = {}): Promise<CaneCocosAssetV1> {
-    if (this.runtimeJson === null && this.runtimeBinary === null) {
+  #cachedData: RuntimeDataV1 | null = null;
+  #cachedInput: unknown = null;
+  #cachedAtlases: unknown[] = [];
+  #cachedCompatibility = false;
+  #cachedBinary = false;
+
+  /** Shared immutable Core data. Each component still owns its own player. */
+  getRuntimeData(options: Omit<RuntimeLoadOptionsV1, "atlases"> = {}): RuntimeDataV1 {
+    // Imported CANEB uses Creator's ordinary native .bin dependency. Legacy
+    // scene-authored BufferAsset references remain supported as well.
+    const native: unknown = this.runtimeBinary !== null ? this.runtimeBinary.buffer() : readCaneAssetNativeDataV1(this);
+    const binary = this.runtimeBinary !== null || native instanceof ArrayBuffer || ArrayBuffer.isView(native);
+    const input = binary ? native : this._runtimeDocument ?? this.runtimeJson?.json;
+    if (input === null || input === undefined) {
       throw new CaneCocosErrorV1("missingResource", "CaneSkeletonDataAsset has no Runtime JSON or CANEB.", {
-        operation: "cocosInstantiateSkeletonData",
-        field: "runtimeJson/runtimeBinary",
-        entityId: this.uuid,
+        operation: "cocosInstantiateSkeletonData", field: "runtimeJson/runtimeBinary", entityId: this.uuid,
       });
     }
-    const atlasDocuments = this.atlasAssets.map((asset, index) => {
+    const compatibility = options.allowUnverifiedFeatures === true;
+    const importedAtlases = this._atlasDocuments;
+    const atlasCount = importedAtlases.length || this.atlasAssets.length;
+    if (this.#cachedData !== null && input === this.#cachedInput && binary === this.#cachedBinary && compatibility === this.#cachedCompatibility
+      && atlasCount === this.#cachedAtlases.length
+      && (importedAtlases.length
+        ? importedAtlases.every((value, index) => value === this.#cachedAtlases[index])
+        : this.atlasAssets.every((value, index) => value?.json === this.#cachedAtlases[index]))) return this.#cachedData;
+    const atlases = importedAtlases.length ? importedAtlases as AtlasDocumentV1[] : this.atlasAssets.map((asset, index) => {
       if (asset?.json === null || asset?.json === undefined) {
         throw new CaneCocosErrorV1("decodeFailed", "Cane Atlas JsonAsset is empty.", {
-          operation: "cocosInstantiateSkeletonData",
-          field: `atlasAssets[${index}]`,
-          entityId: this.uuid,
+          operation: "cocosInstantiateSkeletonData", field: `atlasAssets[${index}]`, entityId: this.uuid,
         });
       }
-      return asset.json as unknown as AtlasDocumentV1;
+      return asset.json;
     });
-    const mergedOptions: CaneCocosAssetLoadOptionsV1 = {
-      ...options,
-      atlases: atlasDocuments,
-      preloadTextures: false,
-    };
-    const asset = this.runtimeBinary !== null
-      ? await createCaneCocosAssetFromCanebV1(this.runtimeBinary.buffer(), mergedOptions, this.nativeUrl)
-      : await createCaneCocosAssetFromJsonV1(this.runtimeJson!.json, mergedOptions, this.nativeUrl);
+    const data = binary
+      ? RuntimeDataV1.fromCaneb(input as ArrayBuffer | ArrayBufferView, { ...options, atlases })
+      : RuntimeDataV1.fromJson(input, { ...options, atlases });
+    this.#cachedInput = input;
+    this.#cachedAtlases = atlases;
+    this.#cachedCompatibility = compatibility;
+    this.#cachedBinary = binary;
+    this.#cachedData = data;
+    return data;
+  }
+
+  /** Legacy Asset node factory, sharing the current Creator instantiation path. */
+  createNode(callback: (error: Error | null, node: Node) => void): void {
+    let node: Node;
+    try { node = this.#createSceneNode(); }
+    catch (error) {
+      callback(error instanceof Error ? error : new Error(String(error)), null as unknown as Node);
+      return;
+    }
+    callback(null, node);
+  }
+
+  /** Creator 3.8.8's asset drop path uses cc.instantiate for custom assets. */
+  protected _instantiate(): Node { return this.#createSceneNode(); }
+
+  #createSceneNode(): Node {
+    const node = new Node(this.name || "Cane skeleton");
+    try {
+      node.layer = Layers.Enum.UI_2D;
+      const skeleton = node.addComponent("cane.CaneSkeleton") as CaneSkeleton | null;
+      if (skeleton === null) throw new Error("CaneSkeleton component is not registered; install the Cane Runtime extension.");
+      skeleton.colorEffectAsset = this.colorEffectAsset;
+      skeleton.skeletonData = this;
+    } catch (error) {
+      node.destroy();
+      throw error;
+    }
+    return node;
+  }
+
+  async instantiate(options: Omit<CaneCocosAssetLoadOptionsV1, "atlases"> = {}): Promise<CaneCocosAssetV1> {
+    // Allow the caller to attach its rejection handler before validation.
+    // Creator's native 3.8.8 Promise bookkeeping asserts when a synchronously
+    // rejected Promise gains a handler immediately after its creation.
+    await Promise.resolve();
+    const data = this.getRuntimeData(options.runtime);
+    const asset = new CaneCocosAssetV1(data, new CocosTextureStore({
+      baseUrl: options.textureBaseUrl ?? sourceDirectoryV1(this.nativeUrl),
+      resolver: options.resolver ?? defaultCaneCocosResourceResolverV1,
+      decoder: options.textureDecoder ?? defaultCaneCocosTextureDecoderV1,
+      ...(options.contextTarget === undefined ? {} : { contextTarget: options.contextTarget }),
+    }), this.nativeUrl, [], () => undefined);
     try {
       const descriptors = runtimeTextureDescriptorsV1(asset.data);
       const keyedTextures = new Map<string, Texture2D>();

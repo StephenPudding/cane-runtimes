@@ -47,6 +47,17 @@ std::shared_ptr<const detail::RuntimeLoadPlanState> prepare(format::Json documen
 RuntimeLoadPlan RuntimeLoadPlan::from_json(std::string_view utf8, const RuntimeLoadOptions& options) {
     return detail::operation("prepareJson", [&] { return RuntimeLoadPlan(prepare(format::parse_json(utf8), options, {}, "loadJson")); });
 }
+std::vector<RuntimeAtlasReference> RuntimeLoadPlan::inspect_atlas_references(const std::vector<std::uint8_t>& source) {
+    return detail::operation("inspectDependencies", [&] {
+        const bool binary = source.size() >= 5 && std::string(source.begin(), source.begin() + 5) == "CANEB";
+        auto document = binary ? format::decode_caneb(source).document : format::parse_json(std::string(source.begin(), source.end()));
+        (void)format::ModelValidation(document, "inspectDependencies").validate();
+        std::vector<RuntimeAtlasReference> references;
+        for (const auto& row : document["atlases"])
+            references.push_back({row["atlasId"].get<std::string>(), row["path"].get<std::string>()});
+        return references;
+    });
+}
 RuntimeLoadPlan RuntimeLoadPlan::from_caneb(const std::vector<std::uint8_t>& bytes, const RuntimeLoadOptions& options) {
     return detail::operation("prepareCaneb", [&] {
         auto decoded = format::decode_caneb(bytes); std::vector<RuntimeLoadWarning> warnings;

@@ -7,7 +7,7 @@
 namespace cane_godot {
 bool CaneSkeleton::replace_project(const godot::Ref<CaneSkeletonData>& data,
     const godot::Dictionary& images, const godot::Dictionary& pages) {
-    if (busy_) { last_error_ = error(cane::Error(cane::ErrorCode::invalid_state, "godotProject", "Reentrant player mutation.")); return false; }
+    if (busy_) { set_error(last_error_, cane::Error(cane::ErrorCode::invalid_state, "godotProject", "Reentrant player mutation.")); return false; }
     busy_ = true; GeometryOwnerScope owner_scope(get_instance_id());
     try {
         require(player_ && asset_, "No skeleton data is assigned.", "skeleton_data");
@@ -35,13 +35,13 @@ bool CaneSkeleton::replace_project(const godot::Ref<CaneSkeletonData>& data,
             host_time = godot::Time::get_singleton()->get_ticks_usec() - host_start;
         });
         core_usec_ = godot::Time::get_singleton()->get_ticks_usec() - start - host_time; upload_usec_ = upload_time;
-        asset_ = std::move(staged_asset); source_asset_ = std::move(source); data_resource_ = data;
+        asset_ = std::move(staged_asset); source_asset_ = std::move(source); connect_data_resource(data);
         projection_.commit(staged_projection); projected_ = is_inside_tree(); projected_sequence_ = frame.sequence();
         slot_states_ = std::move(staged_slots); slot_indices_ = std::move(staged_indices); slot_breaks_ = std::move(staged_breaks);
         slot_sequence_ = frame.sequence(); slot_cache_valid_ = true;
         last_error_.clear(); notify_events(); busy_ = false; return true;
     } catch (const std::exception& failure) {
-        last_error_ = error(failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
+        set_error(last_error_, failure); emit_signal("runtime_error", last_error_.duplicate(true)); busy_ = false; return false;
     }
 }
 }

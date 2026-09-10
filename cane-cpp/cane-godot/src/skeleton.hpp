@@ -20,6 +20,10 @@ class CaneSkeleton : public godot::Node2D {
     godot::Dictionary last_error_;
     godot::Array replay_events_;
     bool automatic_ = true, busy_ = false;
+    godot::String initial_animation_;
+    godot::PackedStringArray initial_skins_;
+    bool initial_loop_ = true, editor_preview_ = false, resource_refresh_pending_ = false;
+    double playback_speed_ = 1;
     std::uint64_t blocked_deletions_ = 0;
     bool projected_ = false;
     bool notified_ = false;
@@ -49,6 +53,9 @@ class CaneSkeleton : public godot::Node2D {
     static void bind_modifier_methods();
     static void bind_geometry_methods();
     static void bind_sdk_methods();
+    static void bind_configuration_methods();
+    void connect_data_resource(const godot::Ref<CaneSkeletonData>& data);
+    void refresh_imported_resource();
     void publish();
     void notify_events();
     void notify_frame(bool sync_followers = true);
@@ -64,8 +71,18 @@ public:
     void set_skeleton_data(const godot::Ref<CaneSkeletonData>& data);
     bool replace_project(const godot::Ref<CaneSkeletonData>& data, const godot::Dictionary& image_files = {}, const godot::Dictionary& atlas_page_files = {});
     godot::Ref<CaneSkeletonData> get_skeleton_data() const { return data_resource_; }
-    void set_automatic(bool value) { automatic_ = value; set_process(value); }
+    void set_automatic(bool value) { automatic_ = value; set_process(value || editor_preview_); }
     bool is_automatic() const { return automatic_; }
+    void set_initial_animation(const godot::String& value);
+    godot::String get_initial_animation() const { return initial_animation_; }
+    void set_initial_skins(const godot::PackedStringArray& value);
+    godot::PackedStringArray get_initial_skins() const { return initial_skins_; }
+    void set_initial_loop(bool value);
+    bool get_initial_loop() const { return initial_loop_; }
+    void set_playback_speed(double value);
+    double get_playback_speed() const { return playback_speed_; }
+    void set_editor_preview(bool value) { editor_preview_ = value; set_process(automatic_ || value); }
+    bool get_editor_preview() const { return editor_preview_; }
     bool play(const godot::String& animation_id, bool looping = true, std::int64_t track = 0, double mix_seconds = -1);
     bool queue(const godot::String& animation_id, double delay_seconds = 0, bool looping = false, std::int64_t track = 0, double mix_seconds = -1);
     bool play_empty(double mix_seconds, std::int64_t track = 0);

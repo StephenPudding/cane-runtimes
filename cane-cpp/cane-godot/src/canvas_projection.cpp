@@ -24,8 +24,19 @@ uniform int cane_mag = 1;
 uniform int cane_wrap_u = 0;
 uniform int cane_wrap_v = 0;
 varying vec4 host_modulate;
-void vertex() { host_modulate = COLOR; }
 float srgb_channel(float s) { return s <= 0.04045 ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4); }
+vec3 srgb_rgb(vec3 s) { return vec3(srgb_channel(s.r), srgb_channel(s.g), srgb_channel(s.b)); }
+float encoded_channel(float l) {
+    // Keep white exact: 1.055 * 1 - 0.055 can round below 1, then lose another
+    // half-float step on write. Ordinary Godot white must equal textured white.
+    if (l == 1.0) { return 1.0; }
+    return l <= 0.0031308 ? 12.92 * l : 1.055 * pow(l, 1.0 / 2.4) - 0.055;
+}
+vec3 encoded_rgb(vec3 l) { return vec3(encoded_channel(l.r), encoded_channel(l.g), encoded_channel(l.b)); }
+void vertex() {
+    host_modulate = COLOR;
+    if (cane_srgb_canvas) { host_modulate.rgb = srgb_rgb(host_modulate.rgb); }
+}
 int wrap_index(int i, int n, int mode) {
     if (mode == 0) { return clamp(i, 0, n - 1); }
     int period = mode == 2 ? n * 2 : n;
@@ -73,13 +84,30 @@ godot::Ref<godot::Shader> CanvasProjection::shader(cane::RenderBlendMode blend, 
     auto& result = shaders_[index]; if (result.is_valid()) return result;
     const bool normal = blend == cane::RenderBlendMode::normal;
     const bool add = blend == cane::RenderBlendMode::add;
+    const bool srgb_canvas = uses_srgb_canvas();
     std::string code = "shader_type canvas_item;\nrender_mode unshaded, ";
-    code += add ? "blend_add;\n" : "blend_premul_alpha;\n";
+    code += srgb_canvas ? "blend_disabled;\n" : add ? "blend_add;\n" : "blend_premul_alpha;\n";
     code += "uniform sampler2D cane_texture;\n";
+    code += srgb_canvas ? "const bool cane_srgb_canvas = true;\n" : "const bool cane_srgb_canvas = false;\n";
     code += color_space == cane::ColorSpace::srgb ? "const bool cane_srgb = true;\n" : "const bool cane_srgb = false;\n";
-    if (!normal && !add) code += "uniform sampler2D destination : hint_screen_texture, repeat_disable, filter_nearest;\n";
+    if (srgb_canvas || (!normal && !add)) code += "uniform sampler2D destination : hint_screen_texture, repeat_disable, filter_nearest;\n";
     code += sampling_source;
-    if (normal) code += "COLOR = vec4(c, a);\n}";
+    if (srgb_canvas) {
+        // Compatibility stores premultiplied sRGB even with use_hdr_2d. Its screen
+        // copy includes alpha. Decode straight RGB, composite in linear space,
+        // then encode straight RGB and premultiply for ordinary CanvasItem consumers.
+        // Non-overlapping triangle groups share one destination snapshot; native
+        // blending is disabled so encoded RGB is never blended as linear light.
+        code += "vec4 dst = textureLod(destination, SCREEN_UV, 0.0);\n";
+        code += "vec3 d = dst.a > 0.000001 ? srgb_rgb(dst.rgb / dst.a) * dst.a : vec3(0.0);\n";
+        code += add ? "float out_a = a + dst.a;\n" : "float out_a = a + dst.a * (1.0 - a);\n";
+        if (normal) code += "vec3 out_c = c + d * (1.0 - a);\n";
+        else if (add) code += "vec3 out_c = c + d;\n";
+        else if (blend == cane::RenderBlendMode::multiply) code += "vec3 out_c = c * d + d * (1.0 - a);\n";
+        else code += "vec3 out_c = c + d - c * d;\n";
+        code += "COLOR = vec4(out_a > 0.000001 ? encoded_rgb(out_c / out_a) * out_a : vec3(0.0), out_a);\n}";
+    }
+    else if (normal) code += "COLOR = vec4(c, a);\n}";
     else if (add) {
         // Godot Add uses SRC_ALPHA for both RGB and alpha. Encoding (Cs/sqrt(As),
         // sqrt(As)) yields exactly Cs+Cd and As+Ad, including self-overlap, without

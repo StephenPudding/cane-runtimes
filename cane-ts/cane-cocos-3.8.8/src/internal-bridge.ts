@@ -6,6 +6,7 @@ import {
   type Material,
   type Texture2D,
   type UI,
+  type Asset,
 } from "cc";
 import { CaneCocosErrorV1 } from "./errors.js";
 import { assertCaneCocosVersionV1 } from "./engine.js";
@@ -27,6 +28,13 @@ const DRAW_INFO_MIDDLEWARE_V1 = 2 as CaneDrawInfoTypeV1;
 const DRAW_INFO_SUB_NODE_V1 = 3 as CaneDrawInfoTypeV1;
 
 let renderEntityConstructorV1: CaneRenderEntityConstructorV1 | null = null;
+
+/** JSB 3.8.8 omits the public nativeAsset alias present in the Web Asset. */
+export function readCaneAssetNativeDataV1(asset: Asset): unknown {
+  if (asset.nativeAsset !== undefined || !sys.isNative) return asset.nativeAsset;
+  assertCaneCocosVersionV1("cocosReadNativeAsset");
+  return (asset as unknown as { readonly _nativeAsset?: unknown })._nativeAsset;
+}
 
 export interface CaneCocosDrawSubmissionV1 {
   readonly kind: "draw";

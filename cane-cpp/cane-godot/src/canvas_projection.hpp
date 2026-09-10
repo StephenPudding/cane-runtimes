@@ -36,10 +36,12 @@ class CanvasProjection {
         MaterialState material_state;
     };
     struct Batch {
+        struct Triangle { std::array<godot::Vector2, 3> points, uvs; };
         std::size_t first = 0, end = 0, triangle = 0, vertices = 0, indices = 0;
         bool special = false;
         MaterialState material;
         godot::Ref<godot::Texture2D> texture;
+        std::vector<Triangle> canvas_triangles;
     };
     std::vector<Draw> draws_;
     std::vector<Batch> batches_;
@@ -50,6 +52,8 @@ class CanvasProjection {
     godot::Ref<godot::Shader> shader(cane::RenderBlendMode blend, cane::ColorSpace color_space);
     void update_material(Draw& draw, const MaterialState& next, const godot::Ref<godot::Texture2D>& texture, ProjectionStats& stats);
     static bool same_material(const MaterialState& a, const MaterialState& b);
+    static bool uses_srgb_canvas();
+    static bool overlaps(const Batch::Triangle& a, const Batch::Triangle& b);
     void plan_batches(const cane::RenderPacket& packet, const LoadedAsset& resources, const std::vector<std::size_t>& slot_breaks, ProjectionStats& stats);
 public:
     CanvasProjection() = default;

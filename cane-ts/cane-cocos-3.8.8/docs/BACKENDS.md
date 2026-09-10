@@ -36,6 +36,9 @@ Native custom pipeline 的 program/layout graph 在 Creator 构建阶段确定�
 并赋给 `CaneSkeleton.colorEffectAsset`；缺失时适配器返回结构化 `missingResource`，不会使用会
 产生白边的内置颜色公式。
 
+使用 [Creator 扩展导入](EDITOR_WORKFLOW.zh-CN.md) 时，Effect 已包含在扩展挂载目录，
+导入器会自动保存对应引用，无需再手动指定。
+
 ## 集中隔离的 3.8.8 内部接口
 
 以下 Creator 接口不属于稳定公开 `cc` API，全部集中在 `src/internal-bridge.ts`：

@@ -32,12 +32,20 @@ class CaneSkeletonData : public godot::Resource {
     GDCLASS(CaneSkeletonData, godot::Resource)
     std::shared_ptr<const LoadedAsset> loaded_;
     godot::Dictionary last_error_;
+    godot::Dictionary imported_bundle_;
+    godot::PackedStringArray attempted_source_files_;
+    bool imported_scene_resource_ = false;
 protected:
     static void _bind_methods();
     static void bind_data_methods();
 public:
     // Each successful load replaces one immutable asset snapshot. Existing players retain theirs.
     godot::Error load_files(const godot::String& runtime_file, const godot::PackedStringArray& atlas_files, bool allow_unverified_features = false);
+    godot::Error import_file(const godot::String& runtime_file);
+    void set_imported_bundle(const godot::Dictionary& bundle);
+    godot::Dictionary get_imported_bundle() const { return imported_bundle_.duplicate(true); }
+    godot::PackedStringArray get_source_files() const;
+    godot::PackedStringArray get_last_import_source_files() const { return attempted_source_files_; }
     godot::PackedStringArray get_animation_ids() const;
     godot::PackedStringArray get_skin_ids() const;
     static godot::Dictionary get_capabilities();
@@ -49,6 +57,7 @@ public:
     godot::Array get_texture_resources();
     godot::Dictionary get_last_error() const { return last_error_.duplicate(true); }
     bool is_loaded() const { return static_cast<bool>(loaded_); }
+    bool is_imported_resource() const { return imported_scene_resource_; }
     std::shared_ptr<const LoadedAsset> snapshot() const { return loaded_; }
 };
 }

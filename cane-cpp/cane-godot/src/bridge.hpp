@@ -26,6 +26,14 @@ inline godot::Dictionary error(const std::exception& failure) {
     } else { result["code"] = 255; result["operation"] = "godotAdapter"; }
     return result;
 }
+inline void assign_dictionary(godot::Dictionary& destination, const godot::Dictionary& value) {
+    // The pinned godot-cpp 4.5 Dictionary move assignment does not release its old
+    // contents. Use its reference-counted copy assignment when replacing a value.
+    if (&destination != &value) destination = value;
+}
+inline void set_error(godot::Dictionary& destination, const std::exception& failure) {
+    assign_dictionary(destination, error(failure));
+}
 inline std::vector<std::string> strings(const godot::PackedStringArray& values) {
     std::vector<std::string> output; output.reserve(static_cast<std::size_t>(values.size()));
     for (std::int64_t i = 0; i < values.size(); ++i) output.push_back(text(values[i]));

@@ -5,6 +5,8 @@
 Unity resources and final-packet rendering over the independent C# Core. The
 source targets Unity 6000.3+ on Windows, with Built-in, URP and HDRP integrations. See [installation](docs/INSTALLATION.md) and [render pipelines](docs/RENDER_PIPELINES.md).
 
+The [editor workflow](docs/EDITOR_WORKFLOW.md) covers automatic Cane JSON/CANEB import, draggable scene prefabs, Inspector animation/skin settings and editor preview.
+
 [Live project replacement](docs/PROJECT_RECONCILIATION.md) prepares candidate textures, final-packet projection and complete Slot order before committing compatible Core state.
 
 [Bone and Point followers](docs/FOLLOWERS.md) project complete published affines through Content transforms, including shear, reflection and zero-scale bones. [Slot content](docs/SLOT_CONTENT.md) follows full published Slot order and inserts external Mesh/Sprite renderers between complete attachments.

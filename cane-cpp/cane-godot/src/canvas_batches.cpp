@@ -6,6 +6,34 @@
 #include <limits>
 
 namespace cane_godot {
+bool CanvasProjection::uses_srgb_canvas() {
+    return godot::RenderingServer::get_singleton()->get_current_rendering_method() == "gl_compatibility";
+}
+
+bool CanvasProjection::overlaps(const Batch::Triangle& a, const Batch::Triangle& b) {
+    // A separating axis also treats a shared edge as disjoint: rasterization owns
+    // that edge once. No epsilon may hide a small but real self-overlap.
+    const auto dot = [](godot::Vector2 p, godot::Vector2 axis) {
+        return static_cast<double>(p.x) * axis.x + static_cast<double>(p.y) * axis.y;
+    };
+    for (const auto* triangle : {&a, &b}) {
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto edge = triangle->points[(i + 1) % 3] - triangle->points[i];
+            if (edge == godot::Vector2()) continue;
+            const godot::Vector2 axis(-edge.y, edge.x);
+            double a_min = dot(a.points[0], axis), a_max = a_min;
+            double b_min = dot(b.points[0], axis), b_max = b_min;
+            for (std::size_t p = 1; p < 3; ++p) {
+                const auto ap = dot(a.points[p], axis), bp = dot(b.points[p], axis);
+                a_min = std::min(a_min, ap); a_max = std::max(a_max, ap);
+                b_min = std::min(b_min, bp); b_max = std::max(b_max, bp);
+            }
+            if (a_max <= b_min || b_max <= a_min) return false;
+        }
+    }
+    return true;
+}
+
 bool CanvasProjection::same_material(const MaterialState& a, const MaterialState& b) {
     return a.texture == b.texture && a.blend == b.blend && a.color_space == b.color_space && a.alpha_mode == b.alpha_mode
         && a.tint.light == b.tint.light && a.tint.dark == b.tint.dark && a.tint.alpha == b.tint.alpha
@@ -15,6 +43,7 @@ bool CanvasProjection::same_material(const MaterialState& a, const MaterialState
 void CanvasProjection::plan_batches(const cane::RenderPacket& packet, const LoadedAsset& resources,
     const std::vector<std::size_t>& slot_breaks, ProjectionStats& stats) {
     batches_.clear();
+    const bool srgb_canvas = uses_srgb_canvas();
     const auto& attachments = packet.attachments();
     for (std::size_t ai = 0; ai < attachments.size(); ++ai) {
         const auto& attachment = attachments[ai];
@@ -40,6 +69,35 @@ void CanvasProjection::plan_batches(const cane::RenderPacket& packet, const Load
             material.wrap_u = atlas->wrap_u; material.wrap_v = atlas->wrap_v;
         }
         if (attachment.indices.empty()) continue;
+        if (srgb_canvas) {
+            // Encoded destinations need explicit linear compositing. Bound the
+            // overlap search and keep adjacent disjoint triangles in one upload/
+            // screen copy. Overlapping geometry starts a fresh ordered group.
+            stats.unbatched_draws += static_cast<std::int64_t>(attachment.indices.size() / 3);
+            for (std::size_t ti = 0; ti < attachment.indices.size(); ti += 3) {
+                Batch::Triangle triangle;
+                for (std::size_t corner = 0; corner < 3; ++corner) {
+                    const auto vi = attachment.indices[ti + corner];
+                    triangle.points[corner] = {attachment.world_vertices_xy[vi * 2], -attachment.world_vertices_xy[vi * 2 + 1]};
+                    triangle.uvs[corner] = {attachment.uvs[vi * 2], attachment.uvs[vi * 2 + 1]};
+                }
+                const bool boundary = ti == 0 && std::binary_search(slot_breaks.begin(), slot_breaks.end(), ai);
+                bool append = !boundary && !batches_.empty() && same_material(batches_.back().material, material)
+                    && batches_.back().canvas_triangles.size() < 64;
+                if (append) for (const auto& previous : batches_.back().canvas_triangles) {
+                    if (overlaps(previous, triangle)) { append = false; break; }
+                }
+                if (!append) {
+                    Batch batch;
+                    batch.first = ai; batch.special = true; batch.material = material; batch.texture = texture->second;
+                    batches_.push_back(std::move(batch));
+                }
+                auto& batch = batches_.back();
+                batch.end = ai + 1; batch.vertices += 3; batch.indices += 3;
+                batch.canvas_triangles.push_back(triangle);
+            }
+            continue;
+        }
         const bool special = attachment.blend == cane::RenderBlendMode::multiply || attachment.blend == cane::RenderBlendMode::screen;
         const auto vertices = attachment.world_vertices_xy.size() / 2;
         stats.unbatched_draws += static_cast<std::int64_t>(special ? attachment.indices.size() / 3 : 1);
@@ -85,13 +143,21 @@ void CanvasProjection::publish(godot::RID parent, const cane::RenderPacket& pack
         draw.slot_id = attachments[batch.first].slot_id;
         server->canvas_item_clear(draw.item);
         server->canvas_item_set_draw_index(draw.item, static_cast<std::int32_t>(index));
-        // Multiply/Screen retain one destination snapshot immediately before each triangle.
+        // Linear backends copy Multiply/Screen per triangle. Compatibility copies
+        // each disjoint group for all blend modes before decoding its destination.
         server->canvas_item_set_copy_to_backbuffer(draw.item, batch.special, godot::Rect2());
         update_material(draw, batch.material, batch.texture, stats);
         draw.points.resize(static_cast<std::int64_t>(batch.vertices)); draw.uvs.resize(static_cast<std::int64_t>(batch.vertices));
         draw.indices.resize(static_cast<std::int64_t>(batch.indices));
         auto* points = draw.points.ptrw(); auto* uvs = draw.uvs.ptrw(); auto* indices = draw.indices.ptrw();
-        if (batch.special) {
+        if (!batch.canvas_triangles.empty()) {
+            std::size_t offset = 0;
+            for (const auto& triangle : batch.canvas_triangles) for (std::size_t i = 0; i < 3; ++i) {
+                points[offset] = triangle.points[i]; uvs[offset] = triangle.uvs[i];
+                indices[offset] = static_cast<std::int32_t>(offset); ++offset;
+            }
+            ++stats.backbuffer_copies;
+        } else if (batch.special) {
             const auto& attachment = attachments[batch.first];
             for (std::size_t i = 0; i < 3; ++i) {
                 const auto source = attachment.indices[batch.triangle * 3 + i];

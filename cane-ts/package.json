@@ -15,7 +15,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm --filter @cane-runtime/layaair-3.4.1 verify:sdk && pnpm --filter @cane-runtime/cocos-3.8.8 verify:sdk && tsc -b && pnpm --filter @cane-runtime/pixi-v8 bundle:iife && pnpm --filter @cane-runtime/layaair-3.4.1 bundle:iife",
+    "build": "pnpm --filter @cane-runtime/layaair-3.4.1 verify:sdk && pnpm --filter @cane-runtime/cocos-3.8.8 verify:sdk && tsc -b && pnpm --filter @cane-runtime/pixi-v8 bundle:iife && pnpm --filter @cane-runtime/layaair-3.4.1 bundle:iife && pnpm --filter @cane-runtime/cocos-3.8.8 bundle:editor",
     "clean": "tsc -b --clean",
     "typecheck": "pnpm --filter @cane-runtime/layaair-3.4.1 verify:sdk && pnpm --filter @cane-runtime/cocos-3.8.8 verify:sdk && tsc -b --pretty false"
   },

@@ -12,11 +12,24 @@
 | C# | [Core](cane-csharp/README.zh-CN.md)、[Unity](cane-csharp/cane-unity/README.zh-CN.md) |
 | C++ | [Core](cane-cpp/README.zh-CN.md)、[Godot 原生 GDExtension](cane-cpp/cane-godot/README.zh-CN.md) |
 
-## 构建与使用
+## 安装与使用
 
-请先阅读[源码构建说明](docs/BUILDING.md)和 [API 与引擎接入指南](docs/README.md)。
-Unity 使用配套的 Core 与 Unity 本地 UPM 包。Godot 使用原生 C++ 扩展，无需 C# 或 .NET。
-构建所需的引擎 SDK 作为外部依赖，需要另行准备。
+引擎安装包和可直接打开的示例工程通过
+[GitHub Releases](https://github.com/StephenPudding/cane-runtimes/releases) 分发。
+请选择对应引擎的安装说明：
+
+| 引擎 | 安装方式 |
+| --- | --- |
+| Unity | 安装配套的 Core 与 Unity UPM 包，导入 Cane JSON/CANEB，再将生成的 Prefab 拖入场景。[使用指南](cane-csharp/cane-unity/docs/EDITOR_WORKFLOW.zh-CN.md) |
+| Godot 4.7.2、Windows x64 | 解压预编译原生插件并启用 Cane。支持普通 Godot，无需 C# 或 .NET。[使用指南](cane-cpp/cane-godot/docs/EDITOR_WORKFLOW.zh-CN.md) |
+| Cocos Creator 3.8.8 | 将预构建扩展解压到工程的 `extensions` 目录，导入动画后将资源放到 Canvas 下。[使用指南](cane-ts/cane-cocos-3.8.8/docs/EDITOR_WORKFLOW.zh-CN.md) |
+| LayaAir 3.4.1 | 按精确版本适配器的[运行时接入说明](cane-ts/cane-layaair-3.4.1/README.zh-CN.md)使用。 |
+
+Unity、Godot 和 Creator 负责正常的游戏编译；安装引擎包无需手动构建 Cane。
+示例压缩包包含原创 Cane Bot 素材、四个动画和两套皮肤，包内 README 说明了打开和运行已保存场景的方法。
+
+开发 Runtime 或自行从源码构建时，请阅读[源码构建说明](docs/BUILDING.md)和
+[API 指南](docs/README.md)。构建所需的引擎 SDK 作为外部依赖另行准备。
 
 ## 规范
 

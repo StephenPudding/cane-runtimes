@@ -35,7 +35,7 @@ namespace Cane
         };
         public static RuntimeCapabilities Current { get; } = new RuntimeCapabilities();
         public string ImplementationName => "cane-csharp-runtime";
-        public string ImplementationVersion => "0.1.0-alpha.4";
+        public string ImplementationVersion => "0.1.0-alpha.5";
         public string NumericPrecision => "binary32";
         public RuntimeVersionRange RuntimeJson { get; } = new RuntimeVersionRange(1, 0, 1, 0);
         public RuntimeVersionRange Caneb { get; } = new RuntimeVersionRange(1, 0, 1, 0);

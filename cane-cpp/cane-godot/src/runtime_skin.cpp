@@ -32,7 +32,7 @@ cane::RuntimeSkinBuilder& CaneRuntimeSkin::live() {
 }
 bool CaneRuntimeSkin::run(const std::function<void()>& action) {
     try { action(); last_error_.clear(); return true; }
-    catch (const std::exception& failure) { last_error_ = error(failure); return false; }
+    catch (const std::exception& failure) { set_error(last_error_, failure); return false; }
 }
 bool CaneRuntimeSkin::initialize(const godot::String& id, const godot::Variant& name, bool exported) {
     return run([&] {

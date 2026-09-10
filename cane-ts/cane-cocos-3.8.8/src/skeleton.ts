@@ -1,4 +1,5 @@
 import {
+  CCString,
   EffectAsset,
   Material,
   Node,
@@ -10,6 +11,7 @@ import {
   game,
   type IAssembler,
 } from "cc";
+import { EDITOR, PREVIEW } from "cc/env";
 import type {
   RuntimeAfterConstraintsListenerV1,
   AffineV1,
@@ -67,23 +69,42 @@ import {
 import { CaneCocosCacheModeV1, CaneCocosRuntime } from "./runtime.js";
 import { CaneSkeletonSystem } from "./skeleton-system.js";
 
-const { ccclass, property, requireComponent } = _decorator;
+const { ccclass, property, requireComponent, executeInEditMode } = _decorator;
 const ZERO_POINT_V1: RuntimePointV1 = Object.freeze({ x: 0, y: 0 });
 
 interface CocosUiPropertiesV1 {
   readonly opacity: number;
 }
 
+interface SkeletonResourcesV1 {
+  runtime: CaneCocosRuntime | null;
+  renderer: CaneCocosRendererV1 | null;
+  asset: CaneCocosAssetV1 | null;
+  followers: CaneCocosFollowerManagerV1 | null;
+  unsubscribeDeviceLoss: (() => void) | null;
+}
+
 /** Formal Cocos Creator 3.8.8 UIRenderer component for a Cane character. */
 @ccclass("cane.CaneSkeleton")
 @requireComponent(UITransform)
+@executeInEditMode
 export class CaneSkeleton extends UIRenderer {
   @property({ type: CaneSkeletonDataAsset })
-  get skeletonData(): CaneSkeletonDataAsset | null { return this.#skeletonData; }
+  get skeletonData(): CaneSkeletonDataAsset | null { return this._skeletonData; }
   set skeletonData(value: CaneSkeletonDataAsset | null) {
-    if (value === this.#skeletonData) return;
-    this.#skeletonData = value;
-    if (this.isValid) void this.initialize().catch((error: unknown) => this.#reportError(error));
+    if (value === this._skeletonData) return;
+    this._skeletonData = value;
+    // A new assignment supersedes an outstanding load immediately. The old
+    // character remains usable until its replacement has loaded successfully.
+    this.#generation += 1;
+    this.#initialization = null;
+    this.#initializingSource = null;
+    if (value === null) {
+      this.#releaseRuntime();
+      this.#lastError = null;
+    } else if (this.#loaded && this.isValid) {
+      this.#initializeAssignedSource();
+    }
   }
 
   /** Creator-compiled Cane color effect. Required for Native builds. */
@@ -92,6 +113,10 @@ export class CaneSkeleton extends UIRenderer {
 
   @property
   defaultAnimation = "";
+
+  /** Ordered skin composition, saved with the scene or prefab instance. */
+  @property({ type: [CCString] })
+  initialSkins: string[] = [];
 
   @property
   loop = true;
@@ -107,17 +132,17 @@ export class CaneSkeleton extends UIRenderer {
   performanceMode = true;
 
   @property
-  get enableBatch(): boolean { return this.#enableBatch; }
+  get enableBatch(): boolean { return this._enableBatch; }
   set enableBatch(value: boolean) {
     const normalized = Boolean(value);
-    if (normalized === this.#enableBatch) return;
-    this.#enableBatch = normalized;
+    if (normalized === this._enableBatch) return;
+    this._enableBatch = normalized;
     this.#renderer?.setEnableBatch(normalized);
     this.markForUpdateRenderData();
   }
 
   @property
-  get timeScale(): number { return this.#timeScale; }
+  get timeScale(): number { return this._timeScale; }
   set timeScale(value: number) {
     if (!Number.isFinite(value) || value < 0) {
       throw new CaneCocosErrorV1("invalidArgument", "timeScale must be finite and non-negative.", {
@@ -126,27 +151,39 @@ export class CaneSkeleton extends UIRenderer {
         actual: value,
       });
     }
-    this.#timeScale = value;
+    this._timeScale = value;
     if (this.#runtime !== null) this.#runtime.timeScale = value;
   }
 
   @property
-  get cacheMode(): CaneCocosCacheModeV1 { return this.#cacheMode; }
+  get cacheMode(): CaneCocosCacheModeV1 { return this._cacheMode; }
   set cacheMode(value: CaneCocosCacheModeV1) {
-    this.#cacheMode = value;
+    this._cacheMode = value;
     if (this.#runtime !== null) this.#runtime.cacheMode = value;
   }
 
-  #skeletonData: CaneSkeletonDataAsset | null = null;
+  @property({ type: CaneSkeletonDataAsset, visible: false, formerlySerializedAs: "skeletonData" })
+  private _skeletonData: CaneSkeletonDataAsset | null = null;
   #runtime: CaneCocosRuntime | null = null;
   #renderer: CaneCocosRendererV1 | null = null;
   #asset: CaneCocosAssetV1 | null = null;
   #followers: CaneCocosFollowerManagerV1 | null = null;
   #initialization: Promise<CaneCocosRuntime> | null = null;
+  #initializingSource: CaneSkeletonDataAsset | null = null;
+  #installedSource: CaneSkeletonDataAsset | null = null;
+  #loaded = false;
+  #configuredRuntime: CaneCocosRuntime | null = null;
+  #configuredAnimation = "";
+  #configuredLoop = true;
+  #configuredSkins: string[] = [];
+  #editorPreviewPlaying = false;
   #generation = 0;
-  #enableBatch = false;
-  #timeScale = 1;
-  #cacheMode = CaneCocosCacheModeV1.REALTIME;
+  @property({ visible: false, formerlySerializedAs: "enableBatch" })
+  private _enableBatch = false;
+  @property({ visible: false, formerlySerializedAs: "timeScale" })
+  private _timeScale = 1;
+  @property({ visible: false, formerlySerializedAs: "cacheMode" })
+  private _cacheMode = CaneCocosCacheModeV1.REALTIME;
   #lastError: unknown = null;
   #unsubscribeDeviceLoss: (() => void) | null = null;
   readonly #pointScratch = new Vec2();
@@ -159,13 +196,15 @@ export class CaneSkeleton extends UIRenderer {
   get runtimePlayer() { return this.#runtime?.player ?? null; }
   get ready(): boolean { return this.#runtime !== null; }
   get lastError(): unknown { return this.#lastError; }
+  get editorPreviewPlaying(): boolean { return this.#editorPreviewPlaying; }
 
   override onLoad(): void {
     super.onLoad();
+    this.#loaded = true;
     this._useVertexOpacity = true;
     this.#flushCaneAssembler();
-    if (this.#skeletonData !== null) {
-      void this.initialize().catch((error: unknown) => this.#reportError(error));
+    if (this._skeletonData !== null) {
+      this.#initializeAssignedSource();
     }
   }
 
@@ -174,45 +213,61 @@ export class CaneSkeleton extends UIRenderer {
     setCaneCrossedWebTraversalV1(this.node, true);
     this.#flushCaneAssembler();
     CaneSkeletonSystem.getInstance().add(this);
-    if (this.#runtime === null && this.#skeletonData !== null) {
-      void this.initialize().catch((error: unknown) => this.#reportError(error));
+    if (this.#runtime === null && this._skeletonData !== null) {
+      this.#initializeAssignedSource();
     }
   }
 
   override onDisable(): void {
+    this.#editorPreviewPlaying = false;
     CaneSkeletonSystem.getInstance().remove(this);
     setCaneCrossedWebTraversalV1(this.node, false);
+    // The adapter owns this retained buffer. UIRenderer.onDisable otherwise
+    // returns it to the engine pool while the adapter still references it.
+    if (this.#renderer !== null && this._renderData === this.#renderer.renderData) this._renderData = null;
+    this.#runtime?.invalidateProjection("context");
     super.onDisable();
   }
 
   override onDestroy(): void {
+    this.#loaded = false;
     CaneSkeletonSystem.getInstance().remove(this);
     setCaneCrossedWebTraversalV1(this.node, false);
     this.#generation += 1;
+    this.#initialization = null;
+    this.#initializingSource = null;
     this.#releaseRuntime();
     super.onDestroy();
   }
 
   async initialize(): Promise<CaneCocosRuntime> {
-    const source = this.#skeletonData;
+    const source = this._skeletonData;
     if (source === null) {
       this.#generation += 1;
       this.#releaseRuntime();
+      await Promise.resolve();
       throw new CaneCocosErrorV1("missingResource", "CaneSkeleton.skeletonData is not assigned.", {
         operation: "cocosInitializeSkeleton",
         field: "skeletonData",
         entityId: this.node.uuid,
       });
     }
-    if (this.#runtime !== null && this.#asset !== null && !this.#asset.destroyed) return this.#runtime;
-    if (this.#initialization !== null) return this.#initialization;
+    if (this.#installedSource === source && this.#runtime !== null && this.#asset !== null && !this.#asset.destroyed) {
+      this.#lastError = null;
+      return this.#runtime;
+    }
+    if (this.#initialization !== null && this.#initializingSource === source) return this.#initialization;
     assertCaneCocosRendererReadyV1("cocosInitializeSkeleton");
     const generation = ++this.#generation;
+    this.#initializingSource = source;
     const promise = this.#initializeGeneration(source, generation);
     this.#initialization = promise;
     try { return await promise; }
     finally {
-      if (this.#initialization === promise) this.#initialization = null;
+      if (this.#initialization === promise) {
+        this.#initialization = null;
+        this.#initializingSource = null;
+      }
     }
   }
 
@@ -225,11 +280,10 @@ export class CaneSkeleton extends UIRenderer {
     sourceUrl: string,
     options: CaneCocosAssetLoadOptionsV1 = {},
   ): Promise<CaneCocosRuntime> {
-    if (this.#initialization !== null) await this.#initialization.catch(() => undefined);
     assertCaneCocosRendererReadyV1("cocosLoadSkeleton");
     const generation = ++this.#generation;
-    this.#skeletonData = null;
-    this.#releaseRuntime();
+    this._skeletonData = null;
+    this.#initializingSource = null;
     const promise = (async (): Promise<CaneCocosRuntime> => {
       const asset = await loadCaneCocosAssetV1(sourceUrl, {
         ...options,
@@ -253,17 +307,18 @@ export class CaneSkeleton extends UIRenderer {
    */
   async initializeWithAsset(asset: CaneCocosAssetV1): Promise<CaneCocosRuntime> {
     if (!(asset instanceof CaneCocosAssetV1) || asset.destroyed) {
+      await Promise.resolve();
       throw new CaneCocosErrorV1("invalidArgument", "A live CaneCocosAssetV1 is required.", {
         operation: "cocosInitializeSkeletonAsset",
         field: "asset",
         entityId: this.node.uuid,
       });
     }
-    if (this.#initialization !== null) await this.#initialization.catch(() => undefined);
+    if (asset === this.#asset && this.#runtime !== null) return this.#runtime;
     assertCaneCocosRendererReadyV1("cocosInitializeSkeletonAsset");
     const generation = ++this.#generation;
-    this.#skeletonData = null;
-    this.#releaseRuntime();
+    this._skeletonData = null;
+    this.#initializingSource = null;
     const promise = this.#installAssetGeneration(asset, generation, "cocosInitializeSkeletonAsset");
     this.#initialization = promise;
     try { return await promise; }
@@ -276,11 +331,10 @@ export class CaneSkeleton extends UIRenderer {
     source: CaneSkeletonDataAsset,
     generation: number,
   ): Promise<CaneCocosRuntime> {
-    this.#releaseRuntime();
     const asset = await source.instantiate({
       ...(game.canvas === null ? {} : { contextTarget: game.canvas }),
     });
-    if (source !== this.#skeletonData) {
+    if (source !== this._skeletonData) {
       await asset.destroy();
       throw new CaneCocosErrorV1("invalidState", "CaneSkeleton initialization was superseded.", {
         operation: "cocosInitializeSkeleton",
@@ -288,13 +342,14 @@ export class CaneSkeleton extends UIRenderer {
         entityId: this.node.uuid,
       });
     }
-    return this.#installAssetGeneration(asset, generation, "cocosInitializeSkeleton");
+    return this.#installAssetGeneration(asset, generation, "cocosInitializeSkeleton", source);
   }
 
   async #installAssetGeneration(
     asset: CaneCocosAssetV1,
     generation: number,
     operation: string,
+    source: CaneSkeletonDataAsset | null = null,
   ): Promise<CaneCocosRuntime> {
     if (!this.isValid || generation !== this.#generation || asset.destroyed) {
       await asset.destroy().catch(() => undefined);
@@ -308,24 +363,25 @@ export class CaneSkeleton extends UIRenderer {
     let runtime: CaneCocosRuntime | null = null;
     let followers: CaneCocosFollowerManagerV1 | null = null;
     let unsubscribeDeviceLoss: (() => void) | null = null;
+    const previous = this.#resources();
+    const previousSource = this.#installedSource;
+    const previousRenderData = this._renderData;
+    const previousAssembler = this._assembler;
     try {
+      const effect = this.colorEffectAsset ?? source?.colorEffectAsset ?? null;
       renderer = new CaneCocosRendererV1(this, {
-        ...(this.colorEffectAsset === null ? {} : { colorEffectAsset: this.colorEffectAsset }),
+        ...(effect === null ? {} : { colorEffectAsset: effect }),
       });
       runtime = new CaneCocosRuntime({
         asset,
         playerOptions: { executionMode: this.performanceMode ? "performance" : "strict" },
         projection: renderer,
-        cacheMode: this.#cacheMode,
+        cacheMode: this._cacheMode,
         updateWhenInvisible: this.updateWhenInvisible,
       });
-      runtime.timeScale = this.#timeScale;
+      runtime.timeScale = this._timeScale;
       runtime.visibleInHierarchy = this.node.activeInHierarchy;
-      if (this.defaultAnimation.length > 0) {
-        runtime.setAnimation(0, this.defaultAnimation, this.loop);
-      } else {
-        runtime.applyCurrentFrame();
-      }
+      this.#applySavedConfiguration(runtime, asset);
       followers = new CaneCocosFollowerManagerV1(
         this.node,
         runtime,
@@ -342,34 +398,155 @@ export class CaneSkeleton extends UIRenderer {
         installedRuntime.pause();
         this.#reportError(error);
       });
+      // Commit only after loading, Core validation and GPU preparation succeed.
+      // Native submission ownership prevents old cleanup erasing the new frame.
       this.#asset = asset;
       this.#renderer = renderer;
       this.#runtime = runtime;
       this.#followers = followers;
       this.#unsubscribeDeviceLoss = unsubscribeDeviceLoss;
+      this.#installedSource = source;
+      this._renderData = null;
       this.#flushCaneAssembler();
       this.#lastError = null;
-      this.node.emit(CaneSkeleton.EventType.READY, this);
-      return runtime;
     } catch (error) {
+      this.#runtime = previous.runtime;
+      this.#renderer = previous.renderer;
+      this.#asset = previous.asset;
+      this.#followers = previous.followers;
+      this.#unsubscribeDeviceLoss = previous.unsubscribeDeviceLoss;
+      this.#installedSource = previousSource;
+      this._renderData = previousRenderData;
+      this._assembler = previousAssembler;
       unsubscribeDeviceLoss?.();
       followers?.destroy();
       if (runtime !== null) runtime.destroy();
       else renderer?.destroy();
+      // Failed staging may have touched the shared Native render entity. Its
+      // old authoritative frame is still owned and can be submitted again.
+      if (this.#runtime !== null) {
+        this.#runtime.invalidateProjection("context");
+        this.#runtime.prepareRenderData();
+        this.#flushCaneAssembler();
+      }
       await asset.destroy().catch(() => undefined);
       throw error;
     }
+    this.#rememberConfiguration(runtime);
+    this.#disposeResources(previous);
+    // A host listener exception must not destroy a successfully installed actor.
+    try { this.node.emit(CaneSkeleton.EventType.READY, this); }
+    catch (error) { this.#reportError(error); }
+    return runtime;
+  }
+
+  #initializeAssignedSource(): void {
+    const pending = this.initialize();
+    const generation = this.#generation;
+    void pending.catch((error: unknown) => {
+      if (this.isValid && generation === this.#generation) this.#reportError(error);
+    });
+  }
+
+  /** Applies changed Inspector values without restarting programmatic playback. */
+  refreshConfiguration(): void {
+    const runtime = this.#runtime;
+    const asset = this.#asset;
+    if (runtime === null || asset === null) return;
+    let changed = runtime !== this.#configuredRuntime || this.defaultAnimation !== this.#configuredAnimation
+      || this.loop !== this.#configuredLoop || this.initialSkins.length !== this.#configuredSkins.length;
+    for (let index = 0; !changed && index < this.initialSkins.length; index += 1) {
+      changed = this.initialSkins[index] !== this.#configuredSkins[index];
+    }
+    if (!changed) return;
+    // An invalid Inspector value is reported once, until that value changes.
+    this.#rememberConfiguration(runtime);
+    this.#applySavedConfiguration(runtime, asset);
+    this.#lastError = null;
+  }
+
+  #rememberConfiguration(runtime: CaneCocosRuntime): void {
+    this.#configuredRuntime = runtime;
+    this.#configuredAnimation = this.defaultAnimation;
+    this.#configuredLoop = this.loop;
+    this.#configuredSkins = [...this.initialSkins];
+  }
+
+  #applySavedConfiguration(runtime: CaneCocosRuntime, asset: CaneCocosAssetV1): void {
+    // Resolve all selections before changing the live player.
+    if (this.defaultAnimation.length > 0 && !asset.data.catalog.animations.some(
+      (animation) => animation.id === this.defaultAnimation || animation.name === this.defaultAnimation,
+    )) throw new CaneCocosErrorV1("missingResource", "Initial animation does not exist in the skeleton data.", {
+      operation: "cocosConfigureSkeleton", field: "defaultAnimation", entityId: this.defaultAnimation,
+    });
+    const seen = new Set<string>();
+    for (const skin of this.initialSkins) {
+      asset.data.skin(skin);
+      if (seen.has(skin)) throw new CaneCocosErrorV1("invalidArgument", "Initial skins must not contain duplicates.", {
+        operation: "cocosConfigureSkeleton", field: "initialSkins", entityId: skin,
+      });
+      seen.add(skin);
+    }
+    runtime.setSkins(this.initialSkins);
+    if (this.defaultAnimation.length > 0) runtime.setAnimation(0, this.defaultAnimation, this.loop);
+    else runtime.clearTracks();
+  }
+
+  /** Transient Editor state; it is deliberately not a serialized property. */
+  setEditorPreviewPlaying(playing: boolean): void {
+    this.#requireEditorPreview();
+    this.refreshConfiguration();
+    const runtime = this.#requireRuntime("cocosEditorPreview");
+    const track = runtime.player.queryTrackState(0);
+    if (playing && track !== null && !track.looping && track.trackTimeSeconds >= track.animationEndSeconds - track.animationStartSeconds) {
+      this.seekEditorPreview(0);
+    }
+    this.#editorPreviewPlaying = playing && track !== null;
+  }
+
+  seekEditorPreview(timeSeconds: number): void {
+    this.#requireEditorPreview();
+    const runtime = this.#requireRuntime("cocosEditorPreview");
+    runtime.player.seek({ timeSeconds, fixedStepSeconds: 1 / 60 });
+    runtime.applyCurrentFrame();
+    this.node.emit(CaneSkeleton.EventType.PREVIEW_CHANGED, this);
+  }
+
+  #requireEditorPreview(): void {
+    if (!EDITOR || PREVIEW) throw new CaneCocosErrorV1("invalidState", "Editor preview is available in the Creator scene editor.", {
+      operation: "cocosEditorPreview", field: "editor",
+    });
   }
 
   /** Automatic update entry used by CaneSkeletonSystem. */
   updateAnimation(deltaSeconds: number): void {
+    // The Editor extension owns a shared preview clock. Editor repaint ticks
+    // must never advance the same player a second time.
+    if (EDITOR && !PREVIEW) return;
     const runtime = this.#runtime;
     if (runtime === null) return;
+    try { this.refreshConfiguration(); }
+    catch (error) { this.#reportError(error); }
     runtime.visibleInHierarchy = this.node.activeInHierarchy;
     runtime.updateWhenInvisible = this.updateWhenInvisible;
     if (!this.autoUpdate) return;
     if (!runtime.updateWhenInvisible && !runtime.visibleInHierarchy) return;
     runtime.update(deltaSeconds);
+  }
+
+  /** Called only by the shared editor preview clock, independently of repaint. */
+  advanceEditorPreview(deltaSeconds: number): void {
+    this.#requireEditorPreview();
+    if (!this.#editorPreviewPlaying) return;
+    if (!this.node.activeInHierarchy) { this.#editorPreviewPlaying = false; return; }
+    this.refreshConfiguration();
+    const runtime = this.#requireRuntime("cocosEditorPreview");
+    runtime.update(deltaSeconds);
+    const track = runtime.player.queryTrackState(0);
+    if (track === null || (!track.looping && track.trackTimeSeconds >= track.animationEndSeconds - track.animationStartSeconds)) {
+      this.#editorPreviewPlaying = false;
+    }
+    this.node.emit(CaneSkeleton.EventType.PREVIEW_CHANGED, this);
   }
 
   /** Host-controlled update; available even when autoUpdate is disabled. */
@@ -795,32 +972,51 @@ export class CaneSkeleton extends UIRenderer {
   }
 
   #releaseRuntime(): void {
-    const runtime = this.#runtime;
-    const renderer = this.#renderer;
-    const asset = this.#asset;
-    const followers = this.#followers;
-    const unsubscribeDeviceLoss = this.#unsubscribeDeviceLoss;
+    const previous = this.#resources();
     this.#runtime = null;
     this.#renderer = null;
     this.#asset = null;
+    this.#installedSource = null;
+    this.#configuredRuntime = null;
+    this.#editorPreviewPlaying = false;
     this.#followers = null;
     this.#unsubscribeDeviceLoss = null;
     this._renderData = null;
-    unsubscribeDeviceLoss?.();
-    followers?.destroy();
-    runtime?.destroy();
-    if (runtime === null) renderer?.destroy();
-    if (asset !== null) void asset.destroy().catch((error: unknown) => this.#reportError(error));
+    this.#disposeResources(previous);
+  }
+
+  #resources(): SkeletonResourcesV1 {
+    return {
+      runtime: this.#runtime, renderer: this.#renderer, asset: this.#asset,
+      followers: this.#followers, unsubscribeDeviceLoss: this.#unsubscribeDeviceLoss,
+    };
+  }
+
+  #disposeResources(resources: SkeletonResourcesV1): void {
+    resources.unsubscribeDeviceLoss?.();
+    resources.followers?.destroy();
+    resources.runtime?.destroy();
+    if (resources.runtime === null) resources.renderer?.destroy();
+    if (resources.asset !== null) void resources.asset.destroy().catch((error: unknown) => this.#reportError(error));
   }
 
   #reportError(error: unknown): void {
     this.#lastError = error;
-    this.node.emit(CaneSkeleton.EventType.ERROR, error, this);
+    // Texture lease cleanup can finish after Creator has detached the node.
+    // Preserve the original error; reporting must not replace it with a null
+    // node exception or produce an unhandled rejection from an event listener.
+    if (!this.isValid || !this.node) {
+      console.error('[Cane resource cleanup]', error);
+      return;
+    }
+    try { this.node.emit(CaneSkeleton.EventType.ERROR, error, this); }
+    catch (listenerError) { console.error('[Cane error listener]', listenerError); }
   }
 
   static readonly EventType = Object.freeze({
     READY: "cane-ready",
     ERROR: "cane-error",
+    PREVIEW_CHANGED: "cane-preview-changed",
   });
 }
 

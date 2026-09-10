@@ -41,7 +41,7 @@ namespace Cane.Unity
             try
             {
                 candidatePlayer = value.Data.CreatePlayer();
-                candidate = new CaneMeshProjection(); candidate.Upload(candidatePlayer.Frame, value);
+                candidate = new CaneMeshProjection(null, value.MaterialTemplates); candidate.Upload(candidatePlayer.Frame, value);
             }
             catch { candidate?.Dispose(); value.Release(); value.Release(); throw; }
             projection?.Dispose(); asset?.Release(); sourceAsset?.Release();
@@ -113,7 +113,7 @@ namespace Cane.Unity
 
         private void Project()
         {
-            if (projection == null) projection = new CaneMeshProjection();
+            if (projection == null) projection = new CaneMeshProjection(null, asset.MaterialTemplates);
             long start = Stopwatch.GetTimestamp(); projection.Upload(player.Frame, asset);
             LastUploadMicroseconds = (Stopwatch.GetTimestamp() - start) * 1000000 / Stopwatch.Frequency;
         }
@@ -146,7 +146,7 @@ namespace Cane.Unity
             finally { performing = false; }
         }
 
-        private void OnEnable() { Active.Add(this); SynchronizeFollowers(); }
+        private void OnEnable() { Active.Add(this); RefreshConfiguration(); SynchronizeFollowers(); }
         private void OnDisable()
         {
             Active.Remove(this); projection?.Dispose(); projection = null;
@@ -154,8 +154,10 @@ namespace Cane.Unity
         }
         private void LateUpdate()
         {
+            if (!ReferenceEquals(SkeletonData, null) || !ReferenceEquals(boundData, null)) RefreshConfiguration();
             if (!Application.IsPlaying(gameObject) || !AutomaticUpdate || player == null) return;
-            try { Advance(UseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime); }
+            if (SkeletonData && (PlaybackSpeed == 0 || ConfigurationError != null)) return;
+            try { Advance((UseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) * (SkeletonData ? PlaybackSpeed : 1)); }
             catch (Exception e)
             {
                 AutomaticUpdate = false;

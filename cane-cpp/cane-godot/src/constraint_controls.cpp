@@ -25,7 +25,7 @@ godot::PackedStringArray CaneSkeleton::get_constraint_ids() {
     query_player([&](const cane::RuntimePlayer& p) { for (const auto& row : p.data().catalog(cane::RuntimeCatalogKind::constraint)) result.push_back(text(row.id)); }); return result;
 }
 godot::Dictionary CaneSkeleton::get_constraint_state(const godot::String& id) {
-    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { result = constraint_value(p.query_constraint_state(text(id))); }); return result;
+    godot::Dictionary result; query_player([&](const cane::RuntimePlayer& p) { assign_dictionary(result, constraint_value(p.query_constraint_state(text(id)))); }); return result;
 }
 godot::Dictionary CaneSkeleton::get_matched_transform_constraint_offsets(const godot::String& id) {
     godot::Dictionary result;

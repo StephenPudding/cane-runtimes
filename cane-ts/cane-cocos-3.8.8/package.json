@@ -23,6 +23,7 @@
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "cocos-assets/**/*.effect",
+    "editor",
     "docs/**/*.md",
     "README.md",
     "README.zh-CN.md"
@@ -32,7 +33,8 @@
   },
   "scripts": {
     "verify:sdk": "node scripts/verify-cocos-sdk.mjs",
-    "build": "pnpm run verify:sdk && tsc -b",
+    "build": "pnpm run verify:sdk && tsc -b && pnpm run bundle:editor",
+    "bundle:editor": "rollup --config rollup.config.mjs",
     "prepack": "pnpm run build",
     "typecheck": "pnpm run verify:sdk && tsc -b --pretty false"
   },
@@ -40,6 +42,9 @@
     "@cane-runtime/core": "workspace:*"
   },
   "devDependencies": {
-    "@cocos/creator-types": "3.8.8"
+    "@babel/core": "7.28.5",
+    "@babel/plugin-transform-spread": "7.27.1",
+    "@cocos/creator-types": "3.8.8",
+    "rollup": "4.63.1"
   }
 }

@@ -13,9 +13,9 @@ conformance suite version are independent compatibility domains.
 | `@cane-runtime/layaair-3.4.1` | Exact LayaAir 3.4.1 peer; ESM/declarations plus optional Core-inclusive, Laya-external IIFE | Official release WebGL/WebGPU `Mesh2D` paths; native/NoRender rejected explicitly |
 | `@cane-runtime/cocos-3.8.8` | Exact Cocos Creator 3.8.8 virtual `cc` module; ESM and declarations; no bundled engine | Creator WebGL/WebGPU plus Windows Native RenderEntity route |
 | C# Core | `netstandard2.1`, Runtime JSON/CANEB/Atlas 1.0 and Runtime API 1.3 | Engine-neutral owned data, players and final packets |
-| Unity | Unity 6000.3+ on Windows; Built-in, URP/HDRP 17.3–17.x | Linear project color space; see the engine integration guide for pass setup |
+| Unity | Unity 6000.3.23f1 and 6000.6.0f1 on Windows; Built-in, URP/HDRP integrations | Linear project color space; see the engine integration guide for tested pipeline versions and pass setup |
 | C++ Core | C++17, Runtime JSON/CANEB/Atlas 1.0 and Runtime API 1.3 | Native engine-neutral Core |
-| Godot | Godot 4.5 native ABI, Windows x64; Compatibility and Forward+ | Requires HDR 2D; does not require .NET |
+| Godot | Ordinary Godot 4.7.2, Windows x64; Compatibility and Forward+; compiled against the 4.5 native ABI | Requires HDR 2D; does not require .NET. The ABI minimum does not certify older renderers |
 
 The Pixi peer is intentionally exact while the adapter is pre-1.0. A wider
 Pixi range requires its own WebGL, WebGPU, Canvas, lifecycle, and integration

@@ -2,12 +2,15 @@
 
 [English](README.md) | **简体中文**
 
+[编辑器使用流程](docs/EDITOR_WORKFLOW.zh-CN.md)：安装插件、导入 Runtime 导出、拖入场景、配置动画与皮肤、预览和运行。
+
 原生 Windows x64 扩展的接入方式见[安装说明](docs/INSTALLATION.md)，
 所需的准确依赖版本见[源码构建指南](../../docs/BUILDING.md)。
 
 [公开 SDK 指南](docs/SDK.md)介绍数据与能力查询、独立快照、采样、原子创作批处理、独立皮肤构建器和配置克隆。
 
-此 GDExtension 面向无需 .NET 的普通 Godot 4.5。`CaneSkeletonData` 拥有不可变的 C++ Core 数据和解码后的引擎纹理。
+此 GDExtension 面向 Windows x64 上无需 .NET 的普通 Godot 4.7.2，使用 Godot 4.5 扩展 ABI。
+旧版渲染器的限制见[安装说明](docs/INSTALLATION.md)。`CaneSkeletonData` 拥有不可变的 C++ Core 数据和解码后的引擎纹理。
 `CaneSkeleton` 拥有一个原生 Core 播放器，发出具有独立所有权的事件字典，并按数据包顺序将最终发布结果上传到子 CanvasItem。
 适配器不重复执行动画、约束、裁剪、变形、Atlas UV 或创作颜色计算。
 
@@ -15,7 +18,8 @@
 
 [性能诊断](docs/PERFORMANCE.md)说明材质状态复用、每次发布的上传计数和最终几何批处理。
 
-开启 `Viewport.use_hdr_2d`，使合成在线性空间中进行；Godot 4.5 的 Compatibility 后端也支持此选项。
+开启 `Viewport.use_hdr_2d`。推荐使用 Forward+，它在线性画布中渲染，Normal/Add 可高效合批。
+Godot 4.5–4.7 的 Compatibility 即使开启 HDR，画布仍使用 sRGB；适配器会显式解码目标颜色、在线性空间混合，再编码输出。
 适配器会检查该要求。它只翻转一次最终顶点 Y，保留输入的 UV 和三角形顺序。
 图集裁边、旋转、裁剪和诊断用 `sourceAffine` 已由 Core 处理。
 
@@ -23,13 +27,18 @@
 显式黑色暗色与未启用双色着色保持不同。显式纹素采样保留 Atlas 独立的 min/mag 过滤，
 以及 U/V 方向的 clamp/repeat/mirror 规则。
 
-Normal 混合使用 Godot 的预乘 alpha 管线。Add 通过提交 `(Cs/sqrt(As), sqrt(As))` 补偿 Godot 的
+在线性画布中，Normal 混合使用 Godot 的预乘 alpha 管线。Add 通过提交 `(Cs/sqrt(As), sqrt(As))` 补偿 Godot 的
 `SRC_ALPHA` 因子，无需复制目标即可得到所需的 `Cs+Cd, As+Ad`。
 Multiply 和 Screen 在每个三角形绘制前读取当前线性目标 RGB，再将修正后的来源提交给原生预乘管线。
 原生混合保留目标 alpha，不依赖 Forward+ 屏幕复制纹理的 Alpha。逐三角形复制 RGB 可以正确处理自身重叠的网格。
 
-资源先暂存并通过 Core 尺寸验证，只有所有引用纹理解码成功后才提交。重新加载 Resource 时，
-已有播放器仍保留原先的不可变资源快照。纹理、材质和 CanvasItem RID 始终位于 Core 之外，
+Compatibility 的四种混合模式均读取 RGBA 目标副本进行显式合成。材质相同、内部互不重叠的相邻三角形共享副本，
+每组最多 64 个；重叠三角形和插槽内容边界会开始新组。输出为预乘 sRGB，与 Godot 画布衔接。
+此路径需要的屏幕复制比 Forward+ 更多。
+
+资源先暂存并通过 Core 尺寸验证，只有所有引用纹理解码成功后才提交。使用手动 `load_files`
+接口的已有播放器仍保留原先的不可变资源快照；导入和序列化的场景资源变化时，会自动更新工程。
+纹理、材质和 CanvasItem RID 始终位于 Core 之外，
 由拥有它们的适配器对象释放。
 
 Core 的[加载计划](../docs/LOADING.md)在数据构建完成前提供有序解码请求，

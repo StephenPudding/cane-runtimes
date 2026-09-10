@@ -3,6 +3,7 @@
 
 namespace cane {
 namespace detail { struct RuntimeLoadPlanState; }
+struct RuntimeAtlasReference { std::string atlas_id, path; };
 struct RuntimeTextureRequest {
     TextureResourceKind kind = TextureResourceKind::direct;
     std::optional<std::string> image_id, atlas_id, page_id, atlas_path;
@@ -20,6 +21,8 @@ class RuntimeLoadPlan {
     std::shared_ptr<const detail::RuntimeLoadPlanState> state_;
     explicit RuntimeLoadPlan(std::shared_ptr<const detail::RuntimeLoadPlanState> state) : state_(std::move(state)) {}
 public:
+    // Inspect an owned dependency catalog before the host acquires Atlas documents.
+    [[nodiscard]] static std::vector<RuntimeAtlasReference> inspect_atlas_references(const std::vector<std::uint8_t>& source);
     [[nodiscard]] static RuntimeLoadPlan from_json(std::string_view utf8, const RuntimeLoadOptions& options = {});
     [[nodiscard]] static RuntimeLoadPlan from_caneb(const std::vector<std::uint8_t>& bytes, const RuntimeLoadOptions& options = {});
     [[nodiscard]] const std::vector<RuntimeTextureRequest>& texture_requests() const noexcept;

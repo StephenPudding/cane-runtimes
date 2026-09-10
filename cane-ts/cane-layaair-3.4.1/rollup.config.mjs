@@ -15,7 +15,13 @@ export default {
     }
     warn(warning);
   },
-  output: {
+  output: [{
+    file: resolve(packageDirectory, "dist/esm/cane-layaair-3.4.1.js"),
+    format: "es",
+    banner: `/*! @cane-runtime/layaair-3.4.1 v${packageManifest.version} | LayaAir 3.4.1 is an external peer */`,
+    generatedCode: { constBindings: true, objectShorthand: true },
+    sourcemap: false,
+  }, {
     file: resolve(packageDirectory, "dist/iife/cane-layaair-3.4.1.min.js"),
     format: "iife",
     name: "CaneLaya",
@@ -29,7 +35,7 @@ export default {
     banner: `/*! @cane-runtime/layaair-3.4.1 v${packageManifest.version} | LayaAir 3.4.1 is an external peer */`,
     generatedCode: { constBindings: true, objectShorthand: true },
     sourcemap: false,
-  },
+  }],
   plugins: [
     {
       name: "cane-workspace-core",

@@ -149,7 +149,7 @@ bool CaneSkeleton::clear_tracks() { return perform([](cane::RuntimePlayer& p) { 
 
 godot::Dictionary CaneSkeleton::get_track_state(std::int64_t track) {
     godot::Dictionary result;
-    query_player([&](const cane::RuntimePlayer& p) { if (const auto state = p.query_track(track_index(track))) result = track_state(*state); });
+    query_player([&](const cane::RuntimePlayer& p) { if (const auto state = p.query_track(track_index(track))) assign_dictionary(result, track_state(*state)); });
     return result;
 }
 godot::Array CaneSkeleton::get_queued_entries(std::int64_t track) {

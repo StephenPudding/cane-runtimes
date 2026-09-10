@@ -18,7 +18,10 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
     "README.md",
     "README.zh-CN.md"
   ],

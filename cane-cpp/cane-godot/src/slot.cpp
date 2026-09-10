@@ -36,7 +36,7 @@ void CaneSlot2D::set_hide_when_empty(bool value) { if (!updating_) { hide_empty_
 void CaneSlot2D::set_follow_enabled(bool value) { if (!updating_) { enabled_ = value; (void)refresh_follow(); } }
 void CaneSlot2D::set_offset_transform(const godot::Transform2D& value) {
     if (updating_) return;
-    if (!value.is_finite()) { last_error_ = error(cane::Error(cane::ErrorCode::non_finite, "godotSlot", "Slot offset must be finite.", "offset_transform")); return; }
+    if (!value.is_finite()) { set_error(last_error_, cane::Error(cane::ErrorCode::non_finite, "godotSlot", "Slot offset must be finite.", "offset_transform")); return; }
     offset_ = value; (void)refresh_follow();
 }
 void CaneSlot2D::detach_projection(bool release) {
@@ -56,7 +56,7 @@ bool CaneSlot2D::refresh_follow() {
     if (auto* source = godot::Object::cast_to<CaneSkeleton>(get_parent())) source->sync_slot_nodes();
     else {
         resolved_ = false; slot_state_.clear(); set_visible(false); detach_projection();
-        last_error_ = error(cane::Error(cane::ErrorCode::invalid_argument, "godotSlot", "CaneSlot2D must be a direct child of CaneSkeleton.", "parent"));
+        set_error(last_error_, cane::Error(cane::ErrorCode::invalid_argument, "godotSlot", "CaneSlot2D must be a direct child of CaneSkeleton.", "parent"));
     }
     return resolved_;
 }
@@ -85,7 +85,7 @@ void CaneSlot2D::project(CaneSkeleton& source, const cane::SlotState* state) {
         slot_state_["dark_rgb"] = state->tint.dark ? godot::Variant(dark) : godot::Variant(); slot_state_["alpha"] = state->tint.alpha;
         set_visible(bone.active && (!hide_empty_ || state->attachment_id.has_value()));
         resolved_ = true; last_error_.clear();
-    } catch (const std::exception& failure) { last_error_ = error(failure); set_visible(false); detach_projection(); }
+    } catch (const std::exception& failure) { set_error(last_error_, failure); set_visible(false); detach_projection(); }
     updating_ = false;
 }
 void CaneSlot2D::_notification(int what) {

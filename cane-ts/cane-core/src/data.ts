@@ -139,7 +139,9 @@ export class RuntimeDataV1 {
       resource.reference.path,
     ]));
     const overlayPagePaths = new Map<string, string>();
+    const overlayAtlasNames = new Map<string, string>();
     for (const resource of snapshot.atlases) {
+      overlayAtlasNames.set(resource.atlas.atlasId, resource.atlas.name);
       for (const page of resource.atlas.pages) {
         overlayPagePaths.set(`${resource.atlas.atlasId}\0${page.pageId}`, page.image);
       }
@@ -156,9 +158,10 @@ export class RuntimeDataV1 {
     const validationAtlases = atlases.map((atlas, atlasIndex) => overlayAtlasPaths.has(atlas.atlasId)
       ? {
           ...atlas,
+          name: `runtime-overlay-${atlasIndex}`,
           pages: atlas.pages.map((page, pageIndex) => ({
             ...page,
-            image: `runtime-resources/atlases/${atlasIndex}/pages/${pageIndex}.png`,
+            image: `runtime-overlay-${atlasIndex}${pageIndex === 0 ? "" : `-${pageIndex + 1}`}.png`,
           })),
         }
       : atlas);
@@ -185,6 +188,7 @@ export class RuntimeDataV1 {
       if (!overlayAtlasPaths.has(atlas.atlasId)) return atlas;
       return {
         ...atlas,
+        name: overlayAtlasNames.get(atlas.atlasId) ?? atlas.name,
         pages: atlas.pages.map((page) => ({
           ...page,
           image: overlayPagePaths.get(`${atlas.atlasId}\0${page.pageId}`) ?? page.image,

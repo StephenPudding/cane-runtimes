@@ -12,12 +12,27 @@ geometry, UVs, tint and draw order and own engine resources and rendering.
 | C# | [Core](cane-csharp/README.md), [Unity](cane-csharp/cane-unity/README.md) |
 | C++ | [Core](cane-cpp/README.md), [native Godot GDExtension](cane-cpp/cane-godot/README.md) |
 
-## Build and use
+## Install and use
 
-Start with [building from source](docs/BUILDING.md) and the
-[API and integration guides](docs/README.md). Unity uses the paired local UPM
-packages. Godot uses a native C++ extension and does not require C#/.NET.
-Required engine SDKs remain external dependencies.
+Engine packages and ready-to-open example projects are distributed through
+[GitHub Releases](https://github.com/StephenPudding/cane-runtimes/releases).
+Use the installation guide for your engine:
+
+| Engine | Installation |
+| --- | --- |
+| Unity | Install the paired Core and Unity UPM packages, then import Cane JSON/CANEB and drag the generated prefab into a scene. [Guide](cane-csharp/cane-unity/docs/EDITOR_WORKFLOW.md) |
+| Godot 4.7.2, Windows x64 | Extract the precompiled native addon and enable the Cane plugin. Ordinary Godot is supported; C#/.NET is not required. [Guide](cane-cpp/cane-godot/docs/EDITOR_WORKFLOW.md) |
+| Cocos Creator 3.8.8 | Extract the prebuilt extension into the project's `extensions` directory, import the animation and place its asset under Canvas. [Guide](cane-ts/cane-cocos-3.8.8/docs/EDITOR_WORKFLOW.md) |
+| LayaAir 3.4.1 | Use the exact-version adapter's [runtime integration guide](cane-ts/cane-layaair-3.4.1/README.md). |
+
+Unity, Godot and Creator handle normal game compilation. Installing the engine
+packages does not require manually building Cane. The example archives include
+original Cane Bot artwork, four animations and two skins; their own READMEs
+explain how to open and run the saved scenes.
+
+For runtime development or a custom source build, see
+[building from source](docs/BUILDING.md) and the [API guides](docs/README.md).
+Engine SDKs are external build dependencies.
 
 ## Specification
 

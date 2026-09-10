@@ -2,26 +2,37 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
+[Editor workflow](docs/EDITOR_WORKFLOW.md): install the addon, import a Runtime
+export, drag it into a scene, configure skins and animation, then preview and run.
+
 Use [installation](docs/INSTALLATION.md) for the native Windows x64 extension
 and [the source build guide](../../docs/BUILDING.md) for its exact dependencies.
 
 The [public SDK guide](docs/SDK.md) covers data/capability discovery, owned snapshots,
 sampling, atomic authoring batches, detached skin builders and configuration cloning.
 
-This GDExtension targets ordinary Godot 4.5 without .NET. `CaneSkeletonData` owns immutable C++ Core data and decoded engine textures. `CaneSkeleton` owns one native Core player, emits owned event dictionaries, and uploads the published final packet to child CanvasItems in packet order. No animation, constraint, clipping, deformation, Atlas UV, or authored tint evaluation is duplicated in the adapter.
+This GDExtension targets ordinary Godot 4.7.2 on Windows x64 without .NET, using
+the Godot 4.5 extension ABI. See [installation](docs/INSTALLATION.md) for older
+renderer limitations. `CaneSkeletonData` owns immutable C++ Core data and decoded
+engine textures. `CaneSkeleton` owns one native Core player, emits owned event
+dictionaries, and uploads the published final packet to child CanvasItems in
+packet order. No animation, constraint, clipping, deformation, Atlas UV, or
+authored tint evaluation is duplicated in the adapter.
 
 ## Rendering contract
 
 [Performance diagnostics](docs/PERFORMANCE.md) describe material-state reuse,
 per-publication upload counters and final-geometry batching.
 
-Enable `Viewport.use_hdr_2d` (also available with Godot 4.5 Compatibility) so compositing occurs in linear space. The adapter checks this requirement. It flips final vertex Y exactly once and leaves the supplied UVs and triangle order intact. Atlas trim, rotation, clipping and diagnostic `sourceAffine` are already resolved by Core.
+Enable `Viewport.use_hdr_2d`; the adapter checks this requirement. Forward+ is recommended for its linear canvas and efficient Normal/Add batching. Godot 4.5–4.7 Compatibility uses a floating-point but sRGB canvas, so the adapter explicitly decodes the destination, blends in linear space and encodes the result. Enabling HDR alone does not perform this conversion in Compatibility. The adapter flips final vertex Y exactly once and leaves the supplied UVs and triangle order intact. Atlas trim, rotation, clipping and diagnostic `sourceAffine` are already resolved by Core.
 
 Texture color space and straight/PMA metadata select shader decoding. Light/dark tint bytes are converted from sRGB for shader math; present-black dark tint remains distinct from no two-color tint. Explicit texel sampling preserves separate Atlas min/mag filtering and U/V clamp/repeat/mirror rules.
 
-Normal blending uses Godot's premultiplied-alpha pipeline. Add compensates for Godot's `SRC_ALPHA` factors by submitting `(Cs/sqrt(As), sqrt(As))`, yielding the required `Cs+Cd, As+Ad` without a destination copy. Multiply and Screen read the current linear destination RGB immediately before each triangle, then submit a corrected source to the native premultiplied pipeline. Native blending preserves destination alpha; this does not rely on the Alpha of Forward+'s screen-copy texture. Per-triangle RGB copies preserve self-overlapping meshes.
+On linear canvases, Normal blending uses Godot's premultiplied-alpha pipeline. Add compensates for Godot's `SRC_ALPHA` factors by submitting `(Cs/sqrt(As), sqrt(As))`, yielding the required `Cs+Cd, As+Ad` without a destination copy. Multiply and Screen read the current linear destination RGB immediately before each triangle, then submit a corrected source to the native premultiplied pipeline. Native blending preserves destination alpha; this does not rely on the Alpha of Forward+'s screen-copy texture. Per-triangle RGB copies preserve self-overlapping meshes.
 
-Resource loads are staged, dimension-validated by Core, and committed only after all referenced textures decode. Existing players retain their original immutable asset snapshot if the Resource is reloaded. Textures, materials and CanvasItem RIDs stay outside Core and are released by their owning adapter objects.
+Compatibility explicitly composites all four blend modes against an RGBA screen copy. Adjacent triangles with identical material and no interior overlap share that copy, up to 64 triangles per group; overlapping triangles and Slot content boundaries start a new group. Output is premultiplied sRGB for the surrounding Godot canvas. This path costs more screen copies than Forward+.
+
+Resource loads are staged, dimension-validated by Core, and committed only after all referenced textures decode. Manual `load_files` users retain their original immutable asset snapshot. Imported and serialized scene resources opt into automatic project reconciliation when their resource changes. Textures, materials and CanvasItem RIDs stay outside Core and are released by their owning adapter objects.
 
 Core's [load plan](../docs/LOADING.md) supplies ordered decode requests before data
 completion, including direct images with omitted width, height or both. No size is

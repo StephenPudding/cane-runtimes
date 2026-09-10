@@ -5,6 +5,8 @@
 基于独立 C# Core 的 Unity 资源管理和最终数据包渲染适配器。源码面向 Windows 上的 Unity 6000.3+，
 包含 Built-in、URP 和 HDRP 集成。请参阅[安装说明](docs/INSTALLATION.md)和[渲染管线](docs/RENDER_PIPELINES.md)。
 
+[编辑器工作流](docs/EDITOR_WORKFLOW.zh-CN.md)支持自动导入 Cane JSON/CANEB、拖入场景、Inspector 动画/皮肤配置及编辑器预览。
+
 [运行时工程替换](docs/PROJECT_RECONCILIATION.md)在提交兼容的 Core 状态前，先准备候选纹理、最终数据包投影
 和完整 Slot 顺序。
 
