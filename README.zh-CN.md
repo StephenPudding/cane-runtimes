@@ -23,9 +23,9 @@
 | Unity | 安装配套的 Core 与 Unity UPM 包，导入 Cane JSON/CANEB，再将生成的 Prefab 拖入场景。[使用指南](cane-csharp/cane-unity/docs/EDITOR_WORKFLOW.zh-CN.md) |
 | Godot 4.7.2、Windows x64 | 解压预编译原生插件并启用 Cane。支持普通 Godot，无需 C# 或 .NET。[使用指南](cane-cpp/cane-godot/docs/EDITOR_WORKFLOW.zh-CN.md) |
 | Cocos Creator 3.8.8 | 将预构建扩展解压到工程的 `extensions` 目录，导入动画后将资源放到 Canvas 下。[使用指南](cane-ts/cane-cocos-3.8.8/docs/EDITOR_WORKFLOW.zh-CN.md) |
-| LayaAir 3.4.1 | 按精确版本适配器的[运行时接入说明](cane-ts/cane-layaair-3.4.1/README.zh-CN.md)使用。 |
+| LayaAir 3.4.1 | 通过“工具 → 导入资源包”安装 `.layapkg`，再把 Cane 数据拖入场景。[使用指南](cane-ts/cane-layaair-3.4.1/docs/EDITOR_WORKFLOW.zh-CN.md) |
 
-Unity、Godot 和 Creator 负责正常的游戏编译；安装引擎包无需手动构建 Cane。
+Unity、Godot、Creator 和 LayaAir 负责正常的游戏编译；安装引擎包无需手动构建 Cane。
 示例压缩包包含原创 Cane Bot 素材、四个动画和两套皮肤，包内 README 说明了打开和运行已保存场景的方法。
 
 开发 Runtime 或自行从源码构建时，请阅读[源码构建说明](docs/BUILDING.md)和

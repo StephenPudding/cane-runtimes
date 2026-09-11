@@ -90,7 +90,8 @@ Cane 的坐标为 X 向右、Y 向上；Laya 的坐标为 X 向右、Y 向下。
 
 预构建发行包提供 `dist/esm/cane-layaair-3.4.1.js`、
 `dist/iife/cane-layaair-3.4.1.min.js`、配套的 Core/适配器 npm 压缩包及 TypeScript 类型声明。
-这些是 Runtime 发行文件；目前还不包含 IDE 场景导入器和 Inspector 操作流程。
+另有编辑器 `.layapkg`，提供 JSON/CANEB 导入、可序列化的 Cane Skeleton 组件和属性面板预览。
+安装、拖入场景、配置、重导入及构建步骤见 [IDE 使用指南](docs/EDITOR_WORKFLOW.zh-CN.md)，无需 MCP 或手动编译 Runtime。
 
 ESM 文件已内嵌 Core。先加载官方引擎，再直接导入该文件，或使用
 `@cane-runtime/layaair-3.4.1/browser` 包入口。它导出适配器 API 和 `Core` 命名空间，

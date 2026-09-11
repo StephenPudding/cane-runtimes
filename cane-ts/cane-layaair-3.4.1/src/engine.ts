@@ -84,6 +84,9 @@ export interface CaneLayaWebGpuDeviceLossV1 {
 }
 
 interface LayaGlobalProbeV1 {
+  readonly WebGLEngine?: abstract new (...args: never[]) => object;
+  readonly WebGPURenderEngine?: abstract new (...args: never[]) => object;
+  readonly NoRenderEngine?: abstract new (...args: never[]) => object;
   readonly LayaEnv?: { readonly version?: unknown; readonly isModernAPIs?: unknown };
   readonly stage?: unknown;
   readonly Mesh2D?: unknown;
@@ -143,7 +146,13 @@ export function assertLayaAir341V1(operation = "layaCreateRuntime"): typeof Laya
 export function detectCaneLayaBackendV1(): CaneLayaBackendV1 {
   const host = assertLayaAir341V1("layaDetectBackend") as unknown as LayaGlobalProbeV1;
   if (host.LayaEnv?.isModernAPIs === true) return "native";
-  const constructorName = host.LayaGL?.renderEngine?.constructor?.name ?? "";
+  const engine = host.LayaGL?.renderEngine;
+  // IDE Release builds minify constructor names. Exported engine symbols remain
+  // stable, so identify the actual registered class before diagnostic fallbacks.
+  if (typeof host.WebGPURenderEngine === "function" && engine instanceof host.WebGPURenderEngine) return "webgpu";
+  if (typeof host.WebGLEngine === "function" && engine instanceof host.WebGLEngine) return "webgl";
+  if (typeof host.NoRenderEngine === "function" && engine instanceof host.NoRenderEngine) return "no-render";
+  const constructorName = engine?.constructor?.name ?? "";
   if (/WebGPU|LayaX/i.test(constructorName)) return "webgpu";
   if (/WebGL/i.test(constructorName)) return "webgl";
   if (/NoRender/i.test(constructorName)) return "no-render";

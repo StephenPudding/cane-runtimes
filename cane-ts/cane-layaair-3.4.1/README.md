@@ -14,6 +14,12 @@ The package is private and `UNLICENSED`; it is not published to npm. `layaair` i
 
 ## Engine prerequisites
 
+For the IDE, use the prebuilt `.layapkg` and saved Cane Bot project from
+[Releases](https://github.com/StephenPudding/cane-runtimes/releases).
+The [IDE guide](docs/EDITOR_WORKFLOW.md) covers resource import, scene drag/drop,
+Inspector settings, preview, dependency recovery and game builds. No MCP or
+manual Runtime compilation is required.
+
 1. Load the official `laya.core.js`, then select one exact 3.4.1 driver:
    - WebGL: load `laya.webgl_2D.js`.
    - WebGPU: load `shader_compiler_web.js`, `nagabind.js`, then `laya.webgpu_2D.js`; keep
@@ -105,8 +111,8 @@ affine columns, including two-axis shear, reflection and negative scale; they do
 
 Prebuilt releases contain both `dist/esm/cane-layaair-3.4.1.js` and
 `dist/iife/cane-layaair-3.4.1.min.js`, plus matching Core/adapter npm tarballs and
-TypeScript declarations. These are runtime distributions; the IDE scene importer
-and Inspector workflow are not included yet.
+TypeScript declarations. The separate editor `.layapkg` adds JSON/CANEB import,
+the serializable Cane Skeleton component and Inspector preview.
 
 The ESM file is self-contained except for the official LayaAir engine. Load the
 engine first, then import this file directly, or use the package's

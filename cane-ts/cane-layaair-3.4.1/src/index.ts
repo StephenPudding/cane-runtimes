@@ -1,4 +1,5 @@
 export * from "./assets.js";
+export * from "./skeleton-asset.js";
 export * from "./bounds.js";
 export * from "./coordinates.js";
 export * from "./engine.js";
